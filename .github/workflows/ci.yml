@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      # Dummy, safe values so Prisma generate / Next build never need a real DB
+      # or real secrets in CI. These are NOT real credentials.
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/worknow_ci?schema=public"
+      NEXTAUTH_SECRET: "ci-dummy-secret-not-real-please-replace"
+      AUTH_SECRET: "ci-dummy-secret-not-real-please-replace"
+      NEXTAUTH_URL: "http://localhost:3000"
+      APP_ENV: "development"
+      APP_URL: "http://localhost:3000"
+      NOTIFICATION_PROVIDER: "mock"
+      UPLOAD_STORAGE: "local"
+      RATE_LIMIT_PROVIDER: "memory"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Secrets check
+        run: npm run secrets:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

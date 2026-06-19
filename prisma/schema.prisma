@@ -1,0 +1,456 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  WORKER
+  EMPLOYER
+  ADMIN
+}
+
+enum JobStatus {
+  PENDING
+  OPEN
+  FILLED
+  CANCELLED
+  REJECTED
+}
+
+enum DurationType {
+  HOURLY
+  DAILY
+  MULTI_DAY
+  MONTHLY
+}
+
+enum SalaryType {
+  HOURLY
+  DAILY
+  MONTHLY
+  FIXED
+}
+
+enum PaymentTiming {
+  SAME_DAY
+  WEEKLY
+  MONTHLY
+  AFTER_COMPLETION
+}
+
+enum JobCategory {
+  FACTORY
+  WAREHOUSE
+  FARM
+  CONSTRUCTION
+  CLEANING
+  RESTAURANT
+  LOADING
+  OTHER
+}
+
+enum Availability {
+  NOW
+  TODAY
+  TOMORROW
+  WEEKENDS
+  NIGHT
+}
+
+enum TransportType {
+  WALK
+  BICYCLE
+  MOTORCYCLE
+  CAR
+  PUBLIC_TRANSIT
+}
+
+// Phase 3 — Trust system. Applies to both worker and employer profiles.
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  NEEDS_MORE_INFO
+}
+
+// Worker work-eligibility category (Phase 2). Self-declared; NOT legal advice.
+enum VisaCategory {
+  KOREAN_CITIZEN
+  F_VISA
+  E9
+  H2
+  D_VISA_STUDENT
+  TOURIST_NOT_ELIGIBLE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+// Report taxonomy (Phase 4).
+enum ReportReason {
+  FAKE_JOB
+  UNPAID_WAGE
+  UNSAFE_WORK
+  WRONG_SALARY
+  HARASSMENT
+  SCAM_SPAM
+  NO_SHOW
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+// Phase 4 — Contact/hiring lifecycle for an interested worker.
+enum InterestStatus {
+  INTERESTED
+  CONTACTED
+  HIRED
+  COMPLETED
+  NO_SHOW
+}
+
+// Phase 5 — In-app notification channel for sendInternalNotification().
+enum NotificationType {
+  NEW_MATCHING_JOB
+  NEW_INTEREST
+  STATUS_CHANGE
+  VERIFICATION_UPDATE
+  SYSTEM
+}
+
+// Channel a notification was sent through (Phase 2).
+enum NotificationChannel {
+  INTERNAL
+  SMS
+  KAKAO
+}
+
+// Delivery outcome for a single channel attempt (Phase 2).
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  MOCKED
+}
+
+// Phase 9 — Analytics event taxonomy.
+enum AnalyticsEventType {
+  JOB_CREATED
+  JOB_VIEWED
+  JOB_INTERESTED
+  WORKER_CONTACTED
+  WORKER_HIRED
+  JOB_COMPLETED
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String?  @unique
+  phone           String   @unique
+  password        String
+  role            Role     @default(WORKER)
+  preferredLocale String? // ko | en | uz (user-level locale for UI + SMS)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workerProfile     WorkerProfile?
+  employerProfile   EmployerProfile?
+  jobInterests      JobInterest[]
+  savedJobs         SavedJob[]
+  notificationPrefs NotificationPreference?
+  reports           Report[]
+  notifications     Notification[]
+}
+
+model WorkerProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  preferredCity      String
+  preferredProvince  String?
+  preferredDistrict  String?
+  preferredRadius    Int                @default(10)
+  languages          String[]
+  categories         JobCategory[]
+  availability       Availability[]
+  transport          TransportType      @default(PUBLIC_TRANSIT)
+  experience         String?
+  visaNote           String?
+  nationality        String?
+  visaCategory       VisaCategory?
+  documentUrl        String? // placeholder for uploaded ID/visa doc
+  bio                String?
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  verificationNote   String? // admin-facing note / reason
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model EmployerProfile {
+  id                         String             @id @default(cuid())
+  userId                     String             @unique
+  user                       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                       String
+  businessType               String
+  city                       String
+  province                   String?
+  district                   String?
+  businessRegistrationNumber String?
+  representativeName         String?
+  businessAddress            String?
+  documentUrl                String? // placeholder for uploaded biz registration doc
+  verificationStatus         VerificationStatus @default(UNVERIFIED)
+  verificationNote           String? // admin-facing note / reason
+  flaggedForReview           Boolean            @default(false) // NEEDS_REVIEW (Phase 4)
+  bio                        String?
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
+
+  jobs Job[]
+}
+
+model Job {
+  id                 String          @id @default(cuid())
+  employerId         String
+  employer           EmployerProfile @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  title              String
+  category           JobCategory
+  description        String
+  address            String
+  country            String          @default("South Korea")
+  province           String?
+  city               String
+  district           String?
+  region             String
+  latitude           Float?
+  longitude          Float?
+  startDateTime      DateTime
+  durationType       DurationType
+  durationDetails    String
+  workersNeeded      Int             @default(1)
+  salaryAmount       Int
+  salaryType         SalaryType
+  paymentTiming      PaymentTiming
+  requiredSkills     String[]
+  languagePreference String[]
+  visaNote           String?
+  contactPhone       String
+  kakaoId            String?
+  isUrgent           Boolean         @default(false)
+  safetyNotes        String?
+  status             JobStatus       @default(PENDING)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  interests JobInterest[]
+  savedBy   SavedJob[]
+}
+
+model JobInterest {
+  id        String         @id @default(cuid())
+  jobId     String
+  job       Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String?
+  status    InterestStatus @default(INTERESTED)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @default(now()) @updatedAt
+
+  @@unique([jobId, userId])
+}
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([jobId, userId])
+}
+
+model NotificationPreference {
+  id               String        @id @default(cuid())
+  userId           String        @unique
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cities           String[]
+  radius           Int           @default(10)
+  categories       JobCategory[]
+  urgentOnly       Boolean       @default(false)
+  enabled          Boolean       @default(true) // master switch: opt out of all alerts
+  inAppEnabled     Boolean       @default(true)
+  emailEnabled     Boolean       @default(true)
+  smsEnabled       Boolean       @default(false)
+  pushEnabled      Boolean       @default(false)
+  nightJobsAllowed Boolean       @default(true)
+  quietHoursStart  Int? // 0-23 local hour; null = no quiet hours
+  quietHoursEnd    Int? // 0-23 local hour
+  smsConsentAt     DateTime? // when the worker opted in to SMS
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  reporterId String
+  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  jobId      String?
+  reasonCode ReportReason @default(OTHER)
+  reason     String // human-readable label (for display)
+  details    String?
+  status     ReportStatus @default(OPEN)
+  adminNote  String?
+  createdAt  DateTime     @default(now())
+
+  @@index([status, createdAt])
+}
+
+model SubscriptionPlan {
+  id           String   @id @default(cuid())
+  name         String
+  price        Int
+  jobsPerMonth Int
+  features     String[]
+  isActive     Boolean  @default(true)
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  currency  String   @default("KRW")
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+}
+
+// Phase 5 — In-app notifications written by NotificationService.sendInternalNotification().
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(SYSTEM)
+  title     String
+  body      String
+  jobId     String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+}
+
+// Phase 2/6 — Per-channel delivery log for admin monitoring. Distinct from
+// Notification (the in-app inbox item): one inbox notification can produce
+// several log rows (internal + sms + kakao).
+model NotificationLog {
+  id        String                     @id @default(cuid())
+  userId    String
+  type      NotificationType           @default(SYSTEM)
+  channel   NotificationChannel        @default(INTERNAL)
+  status    NotificationDeliveryStatus @default(PENDING)
+  recipient String // phone or user id, depending on channel
+  message   String
+  jobId     String?
+  error     String?
+  createdAt DateTime                   @default(now())
+
+  @@index([status, createdAt])
+  @@index([channel, createdAt])
+}
+
+// Phase 9 — Append-only analytics event log. Ready to forward to Amplitude/PostHog later.
+model AnalyticsEvent {
+  id        String             @id @default(cuid())
+  type      AnalyticsEventType
+  userId    String?
+  jobId     String?
+  metadata  Json?
+  createdAt DateTime           @default(now())
+
+  @@index([type, createdAt])
+}
+
+// ── Document verification (this phase) ──────────────────────────────
+enum DocumentOwnerType {
+  WORKER
+  EMPLOYER
+}
+
+enum DocumentType {
+  BUSINESS_REGISTRATION
+  ID_CARD
+  VISA_DOCUMENT
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model VerificationDocument {
+  id                String            @id @default(cuid())
+  ownerUserId       String
+  ownerType         DocumentOwnerType
+  documentType      DocumentType      @default(OTHER)
+  originalFilename  String
+  storedFilename    String // safe random name on disk; never the user's name
+  mimeType          String
+  sizeBytes         Int
+  status            DocumentStatus    @default(PENDING)
+  uploadedAt        DateTime          @default(now())
+  reviewedAt        DateTime?
+  reviewedByAdminId String?
+  adminNote         String?
+  expiresAt         DateTime? // optional retention deadline
+  deletedAt         DateTime? // soft-delete marker (file removed from storage)
+  deletionReason    String?
+
+  @@index([ownerUserId, status])
+  @@index([status, uploadedAt])
+}
+
+// ── Reputation (this phase) ─────────────────────────────────────────
+enum ReviewerRole {
+  WORKER
+  EMPLOYER
+}
+
+model Review {
+  id           String       @id @default(cuid())
+  jobId        String
+  reviewerId   String
+  revieweeId   String
+  reviewerRole ReviewerRole
+  rating       Int // 1..5
+  comment      String?
+  createdAt    DateTime     @default(now())
+
+  @@unique([jobId, reviewerId, revieweeId])
+  @@index([revieweeId])
+}
+
+// ── Admin audit log (this phase) ────────────────────────────────────
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String // DOCUMENT_UPLOADED / DOCUMENT_REVIEWED / DOCUMENT_REJECTED / ...
+  targetType String // DOCUMENT / EMPLOYER / WORKER / REPORT
+  targetId   String
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
