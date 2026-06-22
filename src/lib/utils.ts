@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format, formatDistanceToNow } from "date-fns";
-import { ko, enUS } from "date-fns/locale";
+import { ko, enUS, uz } from "date-fns/locale";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -36,8 +36,6 @@ export function formatRelativeTime(
   locale: "ko" | "en" | "uz" = "ko"
 ): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  return formatDistanceToNow(d, {
-    addSuffix: true,
-    locale: locale === "en" ? enUS : ko,
-  });
+  const dfnsLocale = locale === "en" ? enUS : locale === "uz" ? uz : ko;
+  return formatDistanceToNow(d, { addSuffix: true, locale: dfnsLocale });
 }

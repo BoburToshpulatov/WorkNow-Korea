@@ -101,6 +101,13 @@ export function JobForm({
       contactPhone: defaultValues?.contactPhone ?? "",
       kakaoId: defaultValues?.kakaoId ?? "",
       isUrgent: defaultValues?.isUrgent ?? false,
+      urgencyType: defaultValues?.urgencyType ?? null,
+      locationNote: defaultValues?.locationNote ?? "",
+      nearPublicTransport: defaultValues?.nearPublicTransport ?? false,
+      parkingAvailable: defaultValues?.parkingAvailable ?? false,
+      shuttleProvided: defaultValues?.shuttleProvided ?? false,
+      pickupAvailable: defaultValues?.pickupAvailable ?? false,
+      transportNote: defaultValues?.transportNote ?? "",
       safetyNotes: defaultValues?.safetyNotes ?? "",
     },
   });
@@ -480,6 +487,71 @@ export function JobForm({
             </div>
           )}
         />
+
+        {/* Urgency type (shown when urgent) */}
+        <div className="space-y-1.5">
+          <Label>{t("match.urgencyLabel")}</Label>
+          <Controller
+            control={control}
+            name="urgencyType"
+            render={({ field }) => (
+              <Select
+                value={field.value ?? "FLEXIBLE"}
+                onValueChange={field.onChange}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["WITHIN_2_HOURS", "TODAY", "TONIGHT", "FLEXIBLE"] as const).map(
+                    (v) => (
+                      <SelectItem key={v} value={v}>
+                        {t(`enums.urgencyType.${v}`)}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
+        {/* Transport information */}
+        <div className="space-y-2 rounded-md border p-3">
+          <Label className="text-sm">{t("match.transportTitle")}</Label>
+          {(
+            [
+              ["nearPublicTransport", "match.nearTransit"],
+              ["shuttleProvided", "match.shuttle"],
+              ["parkingAvailable", "match.parking"],
+              ["pickupAvailable", "match.pickup"],
+            ] as const
+          ).map(([name, label]) => (
+            <Controller
+              key={name}
+              control={control}
+              name={name}
+              render={({ field }) => (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">{t(label)}</span>
+                  <Switch
+                    checked={!!field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </div>
+              )}
+            />
+          ))}
+          <Input
+            placeholder={t("match.transportNoteLabel")}
+            {...register("transportNote")}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="locationNote">{t("match.locationNoteLabel")}</Label>
+          <Input id="locationNote" {...register("locationNote")} />
+        </div>
       </Section>
 
       <Disclaimer />

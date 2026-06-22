@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { verificationSchema } from "@/lib/validations";
 import { NotificationService } from "@/lib/notifications";
-import { VERIFICATION_STATUS_LABELS } from "@/lib/constants";
+import { normalizeLocale, translate } from "@/lib/i18n";
 
 /**
  * Admin sets the verification status of a worker or employer profile.
@@ -37,11 +37,18 @@ export async function PATCH(req: NextRequest) {
           })
         ).userId;
 
+  const recipient = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { preferredLocale: true },
+  });
+  const locale = normalizeLocale(recipient?.preferredLocale);
   void NotificationService.sendInternalNotification({
     userId,
     type: "VERIFICATION_UPDATE",
-    title: "인증 상태 변경",
-    body: `회원님의 인증 상태가 "${VERIFICATION_STATUS_LABELS[status]}"(으)로 변경되었습니다.`,
+    title: translate("notif.verifyTitle", locale),
+    body: translate("notif.verifyBody", locale, {
+      status: translate(`verification.${status}`, locale),
+    }),
   });
 
   return NextResponse.json({ ok: true });

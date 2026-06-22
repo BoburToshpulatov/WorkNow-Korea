@@ -79,6 +79,7 @@ const ko = {
       WEEKLY: "주급",
       MONTHLY: "월급",
       AFTER_COMPLETION: "업무 완료 후",
+      NEGOTIABLE: "협의",
     },
     availability: {
       NOW: "지금 가능",
@@ -86,6 +87,20 @@ const ko = {
       TOMORROW: "내일",
       WEEKENDS: "주말",
       NIGHT: "야간",
+    },
+    availabilityStatus: {
+      AVAILABLE_NOW: "지금 가능",
+      AVAILABLE_TODAY: "오늘 가능",
+      AVAILABLE_TONIGHT: "오늘 밤 가능",
+      AVAILABLE_TOMORROW: "내일 가능",
+      WEEKENDS_ONLY: "주말만 가능",
+      UNAVAILABLE: "불가능",
+    },
+    urgencyType: {
+      WITHIN_2_HOURS: "2시간 이내",
+      TODAY: "오늘 중",
+      TONIGHT: "오늘 밤",
+      FLEXIBLE: "시간 협의",
     },
     transport: {
       WALK: "도보",
@@ -124,12 +139,78 @@ const ko = {
     employerVerified: "인증된 고용주",
   },
 
+  // Core marketplace matching engine (location, availability, urgency, transport, rehire)
+  match: {
+    distanceAway: "{km}km 거리",
+    // Feed sorting
+    sortBy: "정렬",
+    sortNearest: "가까운 순",
+    sortHighestPay: "급여 높은 순",
+    sortNewest: "최신 순",
+    sortUrgent: "긴급 우선",
+    // Distance filter
+    distanceWithin: "거리",
+    anyDistance: "전체 거리",
+    within: "{km}km 이내",
+    locationNeeded: "거리 정렬을 사용하려면 프로필에 위치를 설정하세요.",
+    // Notification titles
+    newJobTitle: "새 일자리 알림",
+    urgentJobTitle: "긴급 일자리 알림",
+    // Worker availability selector
+    availTitle: "지금 근무 가능하신가요?",
+    availHint: "상태를 변경하면 맞는 일자리 알림을 받습니다. ‘불가능’ 선택 시 알림이 중지됩니다.",
+    availUpdated: "근무 가능 상태가 변경되었습니다",
+    availError: "상태 변경에 실패했습니다",
+    // Urgency
+    urgencyLabel: "긴급도",
+    // Transport
+    transportTitle: "교통 정보",
+    nearTransit: "대중교통 인접",
+    parking: "주차 가능",
+    shuttle: "셔틀 제공",
+    pickup: "픽업 가능",
+    transportNoteLabel: "교통 안내",
+    locationNoteLabel: "위치 안내 (예: 정문, 건물명)",
+    badgeMetro: "지하철 인접",
+    badgeParking: "주차",
+    badgeShuttle: "셔틀",
+    badgePickup: "픽업",
+    // Rehire
+    rehireNav: "재고용",
+    rehireTitle: "이전 근로자 재고용",
+    rehireDesc: "함께 일을 완료한 근로자를 다시 초대하세요.",
+    rehireSelectJob: "초대할 공고 선택",
+    rehireSend: "재고용 초대 보내기",
+    rehireSent: "초대를 보냈습니다",
+    rehireError: "초대 전송에 실패했습니다",
+    rehireNoWorkers: "아직 함께 일을 완료한 근로자가 없습니다.",
+    rehireNoOpenJob: "먼저 모집 중인 공고를 등록하세요.",
+    lastWorked: "마지막 근무",
+    completedTogether: "함께 완료한 일",
+    workerRating: "근로자 평점",
+    inviteTitle: "재고용 초대",
+    inviteBody: "{employer}님이 다시 함께 일하자고 초대했습니다: {job}",
+  },
+
   applicantStatus: {
     INTERESTED: "관심 표시",
     CONTACTED: "연락함",
     HIRED: "채용 확정",
     COMPLETED: "근무 완료",
     NO_SHOW: "노쇼",
+  },
+
+  // Server-generated notification titles/bodies (in-app + SMS fallback text)
+  notif: {
+    interestTitle: "새로운 관심 근로자",
+    interestBody: '{name}님이 "{job}" 공고에 관심을 표시했습니다.',
+    statusTitle: "지원 상태 변경",
+    statusBody: '"{job}" · {status}',
+    verifyTitle: "인증 상태 변경",
+    verifyBody: '회원님의 인증 상태가 "{status}"(으)로 변경되었습니다.',
+    docTitle: "서류 검토 완료",
+    docApproved: "제출하신 서류가 승인되었습니다.",
+    docRejected: "제출하신 서류가 반려되었습니다.",
   },
 
   // Trust, verification flow, visa, reports, safety (Phase 1–6)
@@ -396,6 +477,9 @@ const ko = {
     preferredArea: "희망 지역 (시/도)",
     preferredDistrict: "희망 구/군",
     travelRadius: "이동 가능 거리 (km)",
+    currentLatitude: "현재 위치 위도 (선택)",
+    currentLongitude: "현재 위치 경도 (선택)",
+    locationHint: "위치를 입력하면 가까운 일자리를 거리순으로 볼 수 있습니다.",
     jobCategories: "희망 직종",
     availability: "근무 가능 시간",
     transport: "이동 수단",

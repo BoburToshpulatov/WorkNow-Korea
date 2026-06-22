@@ -55,7 +55,10 @@ Every item is verifiable. Run before inviting any real users. Pairs with
 - [ ] CSV exports work (`/admin/ops`): users / jobs / interests / reports / verifications.
 
 ## Final
+- [ ] `npm run secrets:check` → ✅ (no real secrets tracked).
+- [ ] `npm run i18n:check` → ✅ (EN complete; UZ complete for user-facing flows).
+- [ ] `npm run test:matching` → ✅ (matching + availability gating).
 - [ ] `npm run typecheck` → 0 errors.
 - [ ] `npm run build` → success.
-- [ ] Korean ↔ English switch persists across refresh.
+- [ ] Korean ↔ English ↔ Uzbek switch persists across refresh.
 - [ ] Demo/seed data removed from production (staging may keep it).

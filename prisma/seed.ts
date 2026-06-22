@@ -153,8 +153,30 @@ async function main() {
     },
   ];
 
+  // Approx district centroids (lat/lng) for distance-based matching demo.
+  const DISTRICT_COORDS: Record<string, [number, number]> = {
+    달서구: [35.8272, 128.5325],
+    북구: [35.8857, 128.5829],
+    남동구: [37.4476, 126.7314],
+    사상구: [35.1525, 128.9913],
+    해운대구: [35.1631, 129.1635],
+  };
+  // One current availability status per worker (matching engine).
+  const WORKER_AVAILABILITY = [
+    "AVAILABLE_TODAY",
+    "AVAILABLE_NOW",
+    "AVAILABLE_TOMORROW",
+    "AVAILABLE_NOW",
+    "WEEKENDS_ONLY",
+  ] as const;
+
   const workers = [];
+  let wIndex = 0;
   for (const w of workerData) {
+    const [lat, lng] = DISTRICT_COORDS[w.district] ?? [35.8714, 128.6014];
+    const availabilityStatus = WORKER_AVAILABILITY[wIndex] ?? "AVAILABLE_TODAY";
+    // First two workers opt in to SMS so SMS delivery logs can be demoed.
+    const smsOptIn = wIndex < 2;
     const user = await prisma.user.create({
       data: {
         phone: w.phone,
@@ -167,6 +189,9 @@ async function main() {
             preferredProvince: w.province,
             preferredDistrict: w.district,
             preferredRadius: 15,
+            currentLatitude: lat,
+            currentLongitude: lng,
+            availabilityStatus,
             languages: w.languages,
             categories: [...w.categories],
             availability: [...w.availability],
@@ -182,12 +207,15 @@ async function main() {
             categories: [...w.categories],
             urgentOnly: false,
             emailEnabled: true,
+            smsEnabled: smsOptIn,
+            smsConsentAt: smsOptIn ? new Date() : null,
           },
         },
       },
       include: { workerProfile: true },
     });
     workers.push(user);
+    wIndex++;
   }
 
   // ── Jobs — realistic Korean listings ──
@@ -215,6 +243,13 @@ async function main() {
     workersNeeded: number;
     languagePreference: string[];
     isUrgent: boolean;
+    urgencyType?: "WITHIN_2_HOURS" | "TODAY" | "TONIGHT" | "FLEXIBLE";
+    nearPublicTransport?: boolean;
+    parkingAvailable?: boolean;
+    shuttleProvided?: boolean;
+    pickupAvailable?: boolean;
+    transportNote?: string | null;
+    locationNote?: string | null;
     status: "OPEN" | "PENDING" | "FILLED";
     description: string;
     safetyNotes?: string | null;
@@ -259,6 +294,12 @@ async function main() {
       workersNeeded: 8,
       languagePreference: ["ko", "uz", "ru"],
       isUrgent: true,
+      urgencyType: "TONIGHT",
+      nearPublicTransport: true,
+      shuttleProvided: true,
+      pickupAvailable: true,
+      transportNote: "북구청역에서 도보 5분, 22시 셔틀 운행",
+      locationNote: "유통단지 정문 옆 3번 게이트",
       status: "OPEN",
       description:
         "물류센터 야간 상하차 업무입니다. 체력이 좋은 분 환영합니다. 외국인 근로자 지원 가능 (취업 가능 비자 필수).",
@@ -465,8 +506,19 @@ async function main() {
   ];
 
   const createdJobs: { id: string; status: string }[] = [];
+  // Province-level fallback coordinates for districts not in DISTRICT_COORDS.
+  const PROVINCE_COORDS: Record<string, [number, number]> = {
+    대구광역시: [35.8714, 128.6014],
+    부산광역시: [35.1796, 129.0756],
+    인천광역시: [37.4563, 126.7052],
+    서울특별시: [37.5665, 126.978],
+  };
   for (const j of jobList) {
     const emp = employers[j.e];
+    const [baseLat, baseLng] =
+      DISTRICT_COORDS[j.district] ?? PROVINCE_COORDS[j.province] ?? [35.8714, 128.6014];
+    // Small deterministic jitter so distances vary between jobs in a district.
+    const jitter = (createdJobs.length % 7) * 0.004;
     const job = await prisma.job.create({
       data: {
         employerId: emp.profile.id,
@@ -479,6 +531,9 @@ async function main() {
         city: j.city,
         district: j.district,
         region: j.district,
+        latitude: baseLat + jitter,
+        longitude: baseLng + jitter,
+        locationNote: j.locationNote ?? null,
         startDateTime: new Date(Date.now() + (createdJobs.length + 1) * 86400000),
         durationType: j.durationType,
         durationDetails: j.durationDetails,
@@ -492,6 +547,16 @@ async function main() {
         contactPhone: emp.phone,
         kakaoId: `worknow_${j.e}`,
         isUrgent: j.isUrgent,
+        // Urgent jobs get an urgency type; default sensible value if unset.
+        urgencyType: j.urgencyType ?? (j.isUrgent ? "TODAY" : null),
+        // Transport: explicit when provided, else light heuristics by category.
+        nearPublicTransport:
+          j.nearPublicTransport ??
+          ["WAREHOUSE", "LOADING", "FACTORY", "CLEANING"].includes(j.category),
+        parkingAvailable: j.parkingAvailable ?? ["CONSTRUCTION", "FARM"].includes(j.category),
+        shuttleProvided: j.shuttleProvided ?? (j.category === "FARM"),
+        pickupAvailable: j.pickupAvailable ?? false,
+        transportNote: j.transportNote ?? null,
         safetyNotes: j.safetyNotes ?? null,
         status: j.status,
       },

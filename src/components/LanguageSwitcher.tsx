@@ -5,8 +5,7 @@ import { useT } from "@/components/LocaleProvider";
 import { SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
 
 /**
- * Language switcher. Korean + English are live; Uzbek is shown as a disabled
- * "(beta)" placeholder until its catalog is filled in.
+ * Language switcher. Korean, English, and Uzbek are all live.
  */
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, setLocale } = useT();
@@ -24,9 +23,8 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         aria-label="Language"
       >
         {SUPPORTED_LOCALES.map((l) => (
-          <option key={l} value={l} disabled={l === "uz"}>
+          <option key={l} value={l}>
             {LOCALE_LABELS[l]}
-            {l === "uz" ? " (beta)" : ""}
           </option>
         ))}
       </select>

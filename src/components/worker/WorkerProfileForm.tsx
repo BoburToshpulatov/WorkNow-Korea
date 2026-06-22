@@ -90,6 +90,9 @@ export function WorkerProfileForm({
       preferredProvince: defaultValues?.preferredProvince ?? "대구광역시",
       preferredDistrict: defaultValues?.preferredDistrict ?? "",
       preferredRadius: defaultValues?.preferredRadius ?? 10,
+      currentLatitude: defaultValues?.currentLatitude ?? null,
+      currentLongitude: defaultValues?.currentLongitude ?? null,
+      availabilityStatus: defaultValues?.availabilityStatus ?? "AVAILABLE_TODAY",
       languages: defaultValues?.languages ?? [],
       categories: defaultValues?.categories ?? [],
       availability: defaultValues?.availability ?? [],
@@ -193,6 +196,31 @@ export function WorkerProfileForm({
         </div>
       </div>
       <Hint>{t("worker.guidanceDistricts")}</Hint>
+
+      {/* Current location for distance-based matching (optional) */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="currentLatitude">{t("worker.currentLatitude")}</Label>
+          <Input
+            id="currentLatitude"
+            type="number"
+            step="any"
+            placeholder="35.8714"
+            {...register("currentLatitude")}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="currentLongitude">{t("worker.currentLongitude")}</Label>
+          <Input
+            id="currentLongitude"
+            type="number"
+            step="any"
+            placeholder="128.6014"
+            {...register("currentLongitude")}
+          />
+        </div>
+      </div>
+      <Hint>{t("worker.locationHint")}</Hint>
 
       <div className="space-y-2">
         <Label>{t("common.languages")}</Label>

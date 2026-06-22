@@ -5,6 +5,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { interestSchema } from "@/lib/validations";
 import { Analytics } from "@/lib/analytics";
 import { NotificationService } from "@/lib/notifications";
+import { normalizeLocale, translate } from "@/lib/i18n";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -51,14 +52,19 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   // signals interest (not on edits to their message).
   if (!existing) {
     void Analytics.jobInterested(id, session.user.id);
-    const worker = await prisma.workerProfile.findUnique({
-      where: { userId: session.user.id },
-    });
+    const [worker, employerUser] = await Promise.all([
+      prisma.workerProfile.findUnique({ where: { userId: session.user.id } }),
+      prisma.user.findUnique({ where: { id: job.employer.userId } }),
+    ]);
+    const locale = normalizeLocale(employerUser?.preferredLocale);
     void NotificationService.sendInternalNotification({
       userId: job.employer.userId,
       type: "NEW_INTEREST",
-      title: "새로운 관심 근로자",
-      body: `${worker?.name ?? "근로자"}님이 "${job.title}" 공고에 관심을 표시했습니다.`,
+      title: translate("notif.interestTitle", locale),
+      body: translate("notif.interestBody", locale, {
+        name: worker?.name ?? translate("enums.role.WORKER", locale),
+        job: job.title,
+      }),
       jobId: job.id,
     });
   }

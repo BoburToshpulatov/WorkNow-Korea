@@ -37,6 +37,39 @@ export function smsNewMatchingJob(v: JobAlertVars, locale: Locale): string {
   );
 }
 
+/** Urgent variant — leads with the urgency cue. */
+export function smsUrgentJob(v: JobAlertVars, locale: Locale): string {
+  return fill(
+    pick(
+      {
+        ko: "[WorkNow] 🚨 긴급 모집: {category}, {district}, {salary}, {startTime}. 지금 앱에서 확인하세요.",
+        en: "[WorkNow] 🚨 Urgent: {category}, {district}, {salary}, {startTime}. Open the app now.",
+        uz: "[WorkNow] 🚨 Shoshilinch: {category}, {district}, {salary}, {startTime}. Hoziroq ilovada ko‘ring.",
+      },
+      locale
+    ),
+    v as unknown as Record<string, string>
+  );
+}
+
+/** Rehire invite from an employer the worker has worked with before. */
+export function smsRehireInvite(
+  v: { employerName: string; jobTitle: string },
+  locale: Locale
+): string {
+  return fill(
+    pick(
+      {
+        ko: "[WorkNow] {employerName}님이 다시 함께 일하자고 초대했습니다: {jobTitle}. 앱에서 확인하세요.",
+        en: "[WorkNow] {employerName} invited you to work again: {jobTitle}. Open the app to view.",
+        uz: "[WorkNow] {employerName} sizni yana ishlashga taklif qildi: {jobTitle}. Ilovada ko‘ring.",
+      },
+      locale
+    ),
+    v
+  );
+}
+
 export function smsNewInterest(
   v: { workerName: string; jobTitle: string },
   locale: Locale

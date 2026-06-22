@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { logAdminAction } from "@/lib/audit";
 import { NotificationService } from "@/lib/notifications";
 import { deleteUploadedFile } from "@/lib/uploads";
+import { normalizeLocale, translate } from "@/lib/i18n";
 import { z } from "zod";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -46,15 +47,20 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     note: parsed.data.adminNote || parsed.data.status,
   });
 
-  // Let the owner know their document was reviewed.
+  // Let the owner know their document was reviewed (in their locale).
+  const owner = await prisma.user.findUnique({
+    where: { id: doc.ownerUserId },
+    select: { preferredLocale: true },
+  });
+  const locale = normalizeLocale(owner?.preferredLocale);
   void NotificationService.sendInternalNotification({
     userId: doc.ownerUserId,
     type: "VERIFICATION_UPDATE",
-    title: "서류 검토 완료 / Document reviewed",
+    title: translate("notif.docTitle", locale),
     body:
       parsed.data.status === "APPROVED"
-        ? "제출하신 서류가 승인되었습니다. / Your document was approved."
-        : "제출하신 서류가 반려되었습니다. / Your document was not approved.",
+        ? translate("notif.docApproved", locale)
+        : translate("notif.docRejected", locale),
   });
 
   return NextResponse.json({ ok: true });

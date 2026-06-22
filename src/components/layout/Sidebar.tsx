@@ -38,6 +38,7 @@ const NAV: Record<string, NavItem[]> = {
     { href: "/employer/dashboard", key: "nav.dashboard", icon: Home },
     { href: "/employer/jobs/new", key: "nav.postJob", icon: PlusCircle },
     { href: "/employer/jobs", key: "nav.myJobs", icon: ListChecks },
+    { href: "/employer/rehire", key: "match.rehireNav", icon: Users },
     { href: "/employer/profile", key: "employer.profileTitle", icon: User },
   ],
   ADMIN: [

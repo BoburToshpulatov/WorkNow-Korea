@@ -41,6 +41,9 @@ jobs:
       - name: Secrets check
         run: npm run secrets:check
 
+      - name: i18n check
+        run: npm run i18n:check
+
       - name: Typecheck
         run: npm run typecheck
 

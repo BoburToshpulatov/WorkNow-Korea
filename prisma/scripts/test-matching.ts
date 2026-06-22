@@ -38,6 +38,13 @@ async function makeWorker(opts: {
   languages: string[];
   urgentOnly: boolean;
   availability?: ("NOW" | "TODAY" | "TOMORROW" | "WEEKENDS" | "NIGHT")[];
+  availabilityStatus?:
+    | "AVAILABLE_NOW"
+    | "AVAILABLE_TODAY"
+    | "AVAILABLE_TONIGHT"
+    | "AVAILABLE_TOMORROW"
+    | "WEEKENDS_ONLY"
+    | "UNAVAILABLE";
   enabled?: boolean;
 }) {
   const user = await prisma.user.create({
@@ -54,6 +61,7 @@ async function makeWorker(opts: {
           languages: opts.languages,
           categories: ["FACTORY"],
           availability: opts.availability ?? [],
+          availabilityStatus: opts.availabilityStatus ?? "AVAILABLE_TODAY",
         },
       },
       notificationPrefs: {
@@ -126,6 +134,22 @@ async function main() {
   await notifyMatchingWorkers(normalJob.id);
   assert((await countNotifs(wUrgentOnly, normalJob.id)) === 0, "urgent-only worker does NOT receive non-urgent alert");
   assert((await countNotifs(wSame, normalJob.id)) === 1, "regular worker receives non-urgent alert");
+
+  console.log("\nScenario C — availability gating (matching engine):");
+  const wUnavailable = await makeWorker({ phone: TAG + "0005", district: "달서구", languages: ["ko"], urgentOnly: false, availabilityStatus: "UNAVAILABLE" });
+  const wTomorrow = await makeWorker({ phone: TAG + "0006", district: "달서구", languages: ["ko"], urgentOnly: false, availabilityStatus: "AVAILABLE_TOMORROW" });
+  const urgentJob2 = await prisma.job.create({
+    data: { ...baseJob, title: "Urgent #2", category: "FACTORY", isUrgent: true, status: "OPEN" },
+  });
+  const normalJob2 = await prisma.job.create({
+    data: { ...baseJob, title: "Normal #2", category: "FACTORY", isUrgent: false, status: "OPEN" },
+  });
+  await notifyMatchingWorkers(urgentJob2.id);
+  await notifyMatchingWorkers(normalJob2.id);
+  assert((await countNotifs(wUnavailable, urgentJob2.id)) === 0, "UNAVAILABLE worker never receives urgent alert");
+  assert((await countNotifs(wUnavailable, normalJob2.id)) === 0, "UNAVAILABLE worker never receives non-urgent alert");
+  assert((await countNotifs(wTomorrow, urgentJob2.id)) === 0, "AVAILABLE_TOMORROW worker does NOT receive urgent alert");
+  assert((await countNotifs(wTomorrow, normalJob2.id)) === 1, "AVAILABLE_TOMORROW worker receives non-urgent alert");
 
   await cleanup();
 

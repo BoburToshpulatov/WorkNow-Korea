@@ -9,7 +9,8 @@ import {
 } from "./notifications/providers";
 import { captureError } from "./error-monitoring";
 import { normalizeLocale, translate, formatJobSalary, formatDateTime } from "./i18n";
-import { smsNewMatchingJob } from "./sms-templates";
+import { smsNewMatchingJob, smsUrgentJob } from "./sms-templates";
+import { isAvailableForJob } from "./matching";
 
 /** True if the given time falls in the typical night window (22:00–06:00). */
 function isNightHour(d: Date): boolean {
@@ -244,13 +245,10 @@ export async function notifyMatchingWorkers(jobId: string): Promise<number> {
         if (!job.languagePreference.some((l) => spoken.includes(l))) continue;
       }
 
-      // (6) availability — urgent jobs target immediately-available workers.
-      if (job.isUrgent && profile?.availability?.length) {
-        const ready =
-          profile.availability.includes("NOW") ||
-          profile.availability.includes("TODAY") ||
-          profile.availability.includes("NIGHT");
-        if (!ready) continue;
+      // (6) availability — UNAVAILABLE never matched; urgent jobs only reach
+      // immediately-available workers (AVAILABLE_NOW/TODAY/TONIGHT).
+      if (profile && !isAvailableForJob(profile.availabilityStatus, job.isUrgent)) {
+        continue;
       }
 
       // Night-job opt-out (non-urgent night jobs only reach opted-in workers).
@@ -259,8 +257,10 @@ export async function notifyMatchingWorkers(jobId: string): Promise<number> {
       const locale = normalizeLocale(
         pref.user.preferredLocale ?? profile?.languages?.[0]
       );
-      const title = job.isUrgent ? "🚨 긴급 일자리 알림" : "새 일자리 알림";
-      const body = `${job.title} · ${job.city} · ${job.salaryAmount.toLocaleString("ko-KR")}원`;
+      const title = job.isUrgent
+        ? `🚨 ${translate("match.urgentJobTitle", locale)}`
+        : translate("match.newJobTitle", locale);
+      const body = `${job.title} · ${job.district ?? job.city} · ${formatJobSalary(job.salaryAmount, job.salaryType, locale)}`;
 
       // In-app notification (respects the per-channel toggle).
       if (pref.inAppEnabled) {
@@ -278,15 +278,15 @@ export async function notifyMatchingWorkers(jobId: string): Promise<number> {
       const smsAllowed =
         pref.smsEnabled && !!pref.smsConsentAt && (job.isUrgent || !quiet);
       if (smsAllowed) {
-        const sms = smsNewMatchingJob(
-          {
-            category: translate(`enums.category.${job.category}`, locale),
-            district: job.district ?? job.city,
-            salary: formatJobSalary(job.salaryAmount, job.salaryType, locale),
-            startTime: formatDateTime(job.startDateTime, locale),
-          },
-          locale
-        );
+        const alertVars = {
+          category: translate(`enums.category.${job.category}`, locale),
+          district: job.district ?? job.city,
+          salary: formatJobSalary(job.salaryAmount, job.salaryType, locale),
+          startTime: formatDateTime(job.startDateTime, locale),
+        };
+        const sms = job.isUrgent
+          ? smsUrgentJob(alertVars, locale)
+          : smsNewMatchingJob(alertVars, locale);
         await NotificationService.sendSmsNotification(
           pref.userId,
           pref.user.phone,

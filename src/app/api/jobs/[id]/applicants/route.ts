@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { interestStatusSchema } from "@/lib/validations";
 import { Analytics } from "@/lib/analytics";
 import { NotificationService } from "@/lib/notifications";
-import { INTEREST_STATUS_LABELS } from "@/lib/constants";
+import { normalizeLocale, translate } from "@/lib/i18n";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -63,13 +63,21 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     void Analytics.jobCompleted(id, interest.userId);
   }
 
-  // Notify the worker about meaningful status changes.
+  // Notify the worker about meaningful status changes (in their locale).
   if (["HIRED", "CONTACTED", "COMPLETED", "NO_SHOW"].includes(parsed.data.status)) {
+    const workerUser = await prisma.user.findUnique({
+      where: { id: interest.userId },
+      select: { preferredLocale: true },
+    });
+    const locale = normalizeLocale(workerUser?.preferredLocale);
     void NotificationService.sendInternalNotification({
       userId: interest.userId,
       type: "STATUS_CHANGE",
-      title: "지원 상태 변경 / Application update",
-      body: `"${interest.job.title}" · ${INTEREST_STATUS_LABELS[parsed.data.status]}`,
+      title: translate("notif.statusTitle", locale),
+      body: translate("notif.statusBody", locale, {
+        job: interest.job.title,
+        status: translate(`applicantStatus.${parsed.data.status}`, locale),
+      }),
       jobId: id,
     });
   }

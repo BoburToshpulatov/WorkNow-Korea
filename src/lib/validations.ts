@@ -40,6 +40,23 @@ export const paymentTimingEnum = z.enum([
   "WEEKLY",
   "MONTHLY",
   "AFTER_COMPLETION",
+  "NEGOTIABLE",
+]);
+
+export const availabilityStatusEnum = z.enum([
+  "AVAILABLE_NOW",
+  "AVAILABLE_TODAY",
+  "AVAILABLE_TONIGHT",
+  "AVAILABLE_TOMORROW",
+  "WEEKENDS_ONLY",
+  "UNAVAILABLE",
+]);
+
+export const urgencyTypeEnum = z.enum([
+  "WITHIN_2_HOURS",
+  "TODAY",
+  "TONIGHT",
+  "FLEXIBLE",
 ]);
 
 export const availabilityEnum = z.enum([
@@ -82,6 +99,13 @@ export const jobSchema = z.object({
   contactPhone: z.string().regex(phoneRegex, "Enter a valid phone number"),
   kakaoId: z.string().optional().or(z.literal("")),
   isUrgent: z.boolean().default(false),
+  urgencyType: urgencyTypeEnum.optional().nullable(),
+  locationNote: z.string().optional().or(z.literal("")),
+  nearPublicTransport: z.boolean().default(false),
+  parkingAvailable: z.boolean().default(false),
+  shuttleProvided: z.boolean().default(false),
+  pickupAvailable: z.boolean().default(false),
+  transportNote: z.string().optional().or(z.literal("")),
   safetyNotes: z.string().optional().or(z.literal("")),
 });
 
@@ -106,6 +130,9 @@ export const workerProfileSchema = z.object({
   preferredProvince: z.string().optional().or(z.literal("")),
   preferredDistrict: z.string().optional().or(z.literal("")),
   preferredRadius: z.coerce.number().int().min(1).max(200).default(10),
+  currentLatitude: z.coerce.number().optional().nullable(),
+  currentLongitude: z.coerce.number().optional().nullable(),
+  availabilityStatus: availabilityStatusEnum.default("AVAILABLE_TODAY"),
   languages: z.array(z.string()).default([]),
   categories: z.array(jobCategoryEnum).default([]),
   availability: z.array(availabilityEnum).default([]),
@@ -163,6 +190,17 @@ export const notificationPrefSchema = z.object({
 
 export const interestSchema = z.object({
   message: z.string().max(500).optional().or(z.literal("")),
+});
+
+// One-click worker availability update (matching engine).
+export const availabilityUpdateSchema = z.object({
+  availabilityStatus: availabilityStatusEnum,
+});
+
+// Employer rehire invite (matching engine).
+export const rehireSchema = z.object({
+  workerUserId: z.string().min(1),
+  jobId: z.string().min(1),
 });
 
 export const reportReasonEnum = z.enum([

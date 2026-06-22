@@ -75,6 +75,20 @@ export function ApplicantCard({
 
         {profile && (
           <div className="flex flex-wrap gap-1.5">
+            <Badge
+              variant={
+                profile.availabilityStatus === "UNAVAILABLE"
+                  ? "outline"
+                  : "secondary"
+              }
+              className={
+                profile.availabilityStatus === "AVAILABLE_NOW"
+                  ? "bg-success text-white"
+                  : undefined
+              }
+            >
+              {t(`enums.availabilityStatus.${profile.availabilityStatus}`)}
+            </Badge>
             {profile.categories.map((c) => (
               <Badge key={c} variant="muted">
                 {t(`enums.category.${c}`)}

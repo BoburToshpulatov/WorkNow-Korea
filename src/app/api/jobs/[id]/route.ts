@@ -85,6 +85,13 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
       contactPhone: d.contactPhone,
       kakaoId: d.kakaoId || null,
       isUrgent: d.isUrgent,
+      urgencyType: d.urgencyType ?? null,
+      locationNote: d.locationNote || null,
+      nearPublicTransport: d.nearPublicTransport,
+      parkingAvailable: d.parkingAvailable,
+      shuttleProvided: d.shuttleProvided,
+      pickupAvailable: d.pickupAvailable,
+      transportNote: d.transportNote || null,
       safetyNotes: d.safetyNotes || null,
     },
   });
