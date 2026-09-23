@@ -2,7 +2,6 @@
 
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
@@ -38,7 +37,6 @@ export function QuickJobForm({
   defaultPhone: string;
   defaultCity: string;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
   const { t } = useT();
   const [submitting, setSubmitting] = useState(false);
