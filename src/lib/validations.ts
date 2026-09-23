@@ -210,6 +210,8 @@ export const notificationPrefSchema = z.object({
 
 export const interestSchema = z.object({
   message: z.string().max(500).optional().or(z.literal("")),
+  // "call" = interest recorded by the call-now button (analytics only).
+  source: z.enum(["call", "interest"]).optional(),
 });
 
 // One-click worker availability update (matching engine).

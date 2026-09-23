@@ -15,6 +15,7 @@
     "db:reset": "prisma migrate reset",
     "db:seed": "tsx prisma/seed.ts",
     "db:check-users": "tsx prisma/check-users.ts",
+    "admin:promote": "tsx prisma/scripts/promote-admin.ts",
     "test:matching": "tsx prisma/scripts/test-matching.ts",
     "documents:cleanup": "tsx prisma/scripts/cleanup-documents.ts",
     "jobs:expire": "tsx prisma/scripts/expire-jobs.ts",

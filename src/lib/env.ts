@@ -28,6 +28,35 @@ export const env = {
   ),
 };
 
+/**
+ * Operator details Korean law requires on the site (직업안정법 job-information
+ * provider filing; 전자상거래법 once paid plans launch; PIPA privacy officer).
+ * Shown in the public footer; required in production.
+ */
+export const business = {
+  name: process.env.BUSINESS_NAME ?? "",
+  representative: process.env.BUSINESS_REPRESENTATIVE ?? "",
+  registrationNo: process.env.BUSINESS_REG_NO ?? "", // 사업자등록번호
+  jobInfoRegNo: process.env.JOB_INFO_REG_NO ?? "", // 직업정보제공사업 신고번호
+  ecommerceRegNo: process.env.ECOMMERCE_REG_NO ?? "", // 통신판매업 신고번호
+  address: process.env.BUSINESS_ADDRESS ?? "",
+  phone: process.env.BUSINESS_PHONE ?? "",
+  email: process.env.BUSINESS_EMAIL ?? "",
+  privacyOfficer: process.env.PRIVACY_OFFICER ?? "", // 개인정보 보호책임자 (name, email)
+};
+export type BusinessInfo = typeof business;
+
+const REQUIRED_BUSINESS_VARS = [
+  "BUSINESS_NAME",
+  "BUSINESS_REPRESENTATIVE",
+  "BUSINESS_REG_NO",
+  "JOB_INFO_REG_NO",
+  "BUSINESS_ADDRESS",
+  "BUSINESS_PHONE",
+  "BUSINESS_EMAIL",
+  "PRIVACY_OFFICER",
+];
+
 export const isProduction = env.appEnv === "production";
 /** Staging and production are both real, shared deployments. */
 export const isDeployed = env.appEnv !== "development";
@@ -91,6 +120,12 @@ export function checkEnv(): EnvValidation {
     }
     if (!env.enableErrorMonitoring) {
       warnings.push(`ENABLE_ERROR_MONITORING is off on ${env.appEnv}.`);
+    }
+    if (isProduction) {
+      const m = missing(REQUIRED_BUSINESS_VARS);
+      if (m.length) {
+        errors.push(`Legally required operator details missing (footer): ${m.join(", ")}.`);
+      }
     }
     if (isProduction && env.notificationProvider === "mock") {
       warnings.push("NOTIFICATION_PROVIDER=mock in production — no SMS will be sent.");

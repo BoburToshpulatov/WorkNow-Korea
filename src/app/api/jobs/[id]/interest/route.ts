@@ -31,6 +31,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const body = await req.json().catch(() => ({}));
   const parsed = interestSchema.safeParse(body);
   const message = parsed.success ? parsed.data.message || null : null;
+  const source = parsed.success ? parsed.data.source : undefined;
 
   const job = await prisma.job.findUnique({
     where: { id },
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   // Only fire analytics + notify the employer on the first time a worker
   // signals interest (not on edits to their message).
   if (!existing) {
-    void Analytics.jobInterested(id, session.user.id);
+    void Analytics.jobInterested(id, session.user.id, source ?? "interest");
     const [worker, employerUser] = await Promise.all([
       prisma.workerProfile.findUnique({ where: { userId: session.user.id } }),
       prisma.user.findUnique({ where: { id: job.employer.userId } }),

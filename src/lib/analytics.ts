@@ -44,8 +44,13 @@ export const Analytics = {
     trackEvent({ type: "JOB_CREATED", jobId, userId }),
   jobViewed: (jobId: string, userId?: string) =>
     trackEvent({ type: "JOB_VIEWED", jobId, userId }),
-  jobInterested: (jobId: string, userId?: string) =>
-    trackEvent({ type: "JOB_INTERESTED", jobId, userId }),
+  jobInterested: (jobId: string, userId?: string, source?: "call" | "interest") =>
+    trackEvent({
+      type: "JOB_INTERESTED",
+      jobId,
+      userId,
+      metadata: source ? { source } : undefined,
+    }),
   workerContacted: (jobId: string, userId?: string) =>
     trackEvent({ type: "WORKER_CONTACTED", jobId, userId }),
   workerHired: (jobId: string, userId?: string) =>

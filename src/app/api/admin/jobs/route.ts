@@ -43,7 +43,13 @@ export async function PATCH(req: NextRequest) {
 
   const job = await prisma.job.update({
     where: { id },
-    data: { status: parsed.data.status },
+    data: {
+      status: parsed.data.status,
+      // Start the liquidity clock the first time the job goes live.
+      ...(parsed.data.status === "OPEN" && !before.publishedAt
+        ? { publishedAt: new Date() }
+        : {}),
+    },
   });
 
   // When an admin approves a job (transition into OPEN), fan out alerts to

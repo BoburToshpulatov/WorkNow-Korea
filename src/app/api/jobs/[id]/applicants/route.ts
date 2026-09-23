@@ -57,7 +57,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   });
 
   // Analytics for the hiring funnel.
-  if (parsed.data.status === "HIRED") {
+  if (parsed.data.status === "CONTACTED") {
+    void Analytics.workerContacted(id, interest.userId);
+  } else if (parsed.data.status === "HIRED") {
     void Analytics.workerHired(id, interest.userId);
   } else if (parsed.data.status === "COMPLETED") {
     void Analytics.jobCompleted(id, interest.userId);

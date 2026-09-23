@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "START_IN_PAST" }, { status: 400 });
   }
 
+  const status = initialJobStatus(employer);
   const job = await prisma.job.create({
     data: {
       employerId: employer.id,
@@ -115,7 +116,8 @@ export async function POST(req: NextRequest) {
       pickupAvailable: d.pickupAvailable,
       transportNote: d.transportNote || null,
       safetyNotes: d.safetyNotes || null,
-      status: initialJobStatus(employer),
+      status: status,
+      publishedAt: status === "OPEN" ? new Date() : null,
     },
   });
 

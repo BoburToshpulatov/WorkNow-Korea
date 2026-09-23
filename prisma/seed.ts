@@ -772,6 +772,12 @@ async function main() {
 
   console.log("Seed complete.");
   console.log("Admin: 010-0000-0000 / admin123");
+  // Demo jobs that are live count as published at creation (liquidity metrics).
+  await prisma.job.updateMany({
+    where: { status: { in: ["OPEN", "FILLED"] } },
+    data: { publishedAt: new Date() },
+  });
+
   console.log("Employer: 010-1111-1111 / password123");
   console.log("Worker: 010-4444-0001 / password123");
 }

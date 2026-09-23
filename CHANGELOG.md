@@ -71,6 +71,25 @@ Launch-readiness fixes found by walking the worker flow on mobile.
   `npm run smoke -- <url>` runs post-deploy checks; health reports `commit`.
 - STAGING_DEPLOYMENT_PLAN.md rewritten as a step-by-step account setup guide.
 
+### Go-live
+- **Matching speed (liquidity) analytics** in Admin → Analytics: urgent jobs
+  answered within 2h, median time to first applicant / first hire, fill rate,
+  share of interests via the call button, response rate by district, and a live
+  list of jobs still waiting for an applicant (ops to-do list).
+- `Job.publishedAt` records when a job first went live (backfilled from
+  `createdAt` for existing live jobs). "Contacted" status changes and the
+  interest source (call vs. interest-only) are now tracked.
+- Legally required operator details (상호, 대표자, 사업자등록번호,
+  직업정보제공사업 신고번호, 통신판매업 신고번호, address, support, privacy officer)
+  are configured via env and shown in the footer; production refuses to boot
+  without them.
+- `npm run admin:promote -- <phone>` to create the first production admin
+  (production is never seeded).
+- Document upload asks users to cover the back digits of resident/alien
+  registration numbers.
+- `LAUNCH_CHECKLIST.md`: legal/regulatory items for counsel, production setup,
+  domain, SMS go-live, and soft-launch go/no-go metrics.
+
 ### Added
 - Feed pagination (20 per page, "Load more") and a result count.
 - ESLint config (`next/core-web-vitals` + `next/typescript`); `npm run lint`

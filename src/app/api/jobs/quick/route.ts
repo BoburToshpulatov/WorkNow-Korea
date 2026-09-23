@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
   const categoryLabel =
     CATEGORY_MAP[d.category as CategoryValue]?.labelKo ?? d.category;
 
+  const status = initialJobStatus(employer);
   const job = await prisma.job.create({
     data: {
       employerId: employer.id,
@@ -82,7 +83,8 @@ export async function POST(req: NextRequest) {
       languagePreference: [],
       contactPhone: d.contactPhone,
       isUrgent: d.isUrgent,
-      status: initialJobStatus(employer), // same moderation rule as the full form
+      status: status, // same moderation rule as the full form
+      publishedAt: status === "OPEN" ? new Date() : null,
     },
   });
 

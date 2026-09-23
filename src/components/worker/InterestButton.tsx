@@ -29,11 +29,11 @@ export function InterestButton({
   const [loading, setLoading] = useState(false);
   const telHref = `tel:${phone.replace(/[^0-9+]/g, "")}`;
 
-  const send = (method: "POST" | "DELETE") =>
+  const send = (method: "POST" | "DELETE", source?: "call" | "interest") =>
     fetch(`/api/jobs/${jobId}/interest`, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify(source ? { source } : {}),
       // Survives the page handing off to the phone dialer.
       keepalive: true,
     });
@@ -42,7 +42,7 @@ export function InterestButton({
   const onCall = () => {
     if (interested) return;
     setInterested(true);
-    send("POST")
+    send("POST", "call")
       .then((res) => {
         if (!res.ok) throw new Error("Failed");
         router.refresh();
@@ -53,7 +53,7 @@ export function InterestButton({
   const toggleInterest = async () => {
     setLoading(true);
     try {
-      const res = await send(interested ? "DELETE" : "POST");
+      const res = await send(interested ? "DELETE" : "POST", "interest");
       if (res.status === 401) {
         router.push("/login");
         return;

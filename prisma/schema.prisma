@@ -284,6 +284,9 @@ model Job {
   transportNote      String?
   safetyNotes        String?
   status             JobStatus       @default(PENDING)
+  // First time the job went OPEN (instantly for verified employers, else on
+  // admin approval). Start of the clock for liquidity metrics.
+  publishedAt        DateTime?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
