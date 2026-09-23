@@ -100,6 +100,21 @@ function scanFile(file: string, findings: Finding[]) {
         const text = m[1];
         if (isProse(text)) findings.push({ file: rel, line: i + 1, text: text.trim() });
       }
+
+      // 3) Multi-line JSX text: a bare line of text between a line ending in
+      //    `>` (not `=>`) and a line starting with `<`.
+      const prev = (lines[i - 1] ?? "").trimEnd();
+      const next = (lines[i + 1] ?? "").trimStart();
+      if (
+        trimmed &&
+        !/[<>{}=;()]/.test(trimmed) &&
+        prev.endsWith(">") &&
+        !prev.endsWith("=>") &&
+        next.startsWith("<") &&
+        isProse(trimmed)
+      ) {
+        findings.push({ file: rel, line: i + 1, text: trimmed });
+      }
     }
   });
 }

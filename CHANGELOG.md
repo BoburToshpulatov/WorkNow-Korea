@@ -5,6 +5,33 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 Versioning: `MAJOR.MINOR.PATCH` with a pre-release suffix during pilot
 (e.g. `0.1.0-pilot`). Release tags use the `v` prefix: `v0.1.0-pilot`.
 
+## [Unreleased]
+
+Launch-readiness fixes found by walking the worker flow on mobile.
+
+### Fixed
+- **Stale jobs stayed open forever.** Jobs now expire once their start time
+  passes a grace window (1 day hourly/daily, 7 multi-day, 30 monthly). Feeds,
+  job detail, and "I'm interested" enforce it at query time; a new hourly
+  `/api/cron/jobs-expire` (and `npm run jobs:expire`) sets `EXPIRED` status.
+  Admins can no longer approve an already-expired job.
+- **"Night" filter returned nothing for Korean jobs** (it searched for the
+  English word "night"). Night = "tonight" urgency, a 20:00–04:59 KST start, or
+  야간/심야/night/tungi in the title/duration.
+- **Mobile feed showed 7 dropdowns before the first job.** Quick chips are one
+  scrollable row; sort + a "Filters (n)" toggle replace the rest on mobile.
+- Duplicate "전체 급여" label on the payment-timing filter.
+- Urgent badge was hardcoded English; `i18n:scan` now also catches multi-line
+  JSX text.
+- Homepage showed invented audience numbers (1,200+ jobs / 3,500+ workers);
+  replaced with verifiable facts (₩0 worker fees, 3 languages, 1 free post).
+
+### Added
+- Feed pagination (20 per page, "Load more") and a result count.
+- ESLint config (`next/core-web-vitals` + `next/typescript`); `npm run lint`
+  now runs in CI.
+- `vercel.json` registering both cron endpoints.
+
 ## [0.2.2-pilot] — 2026-06-24
 
 Full multilingual UI pass. No new features — the entire visible app now renders

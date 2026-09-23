@@ -149,6 +149,25 @@ export function sortJobs<T extends SortableJob>(jobs: T[], sort: JobSort): T[] {
   return sorted;
 }
 
+const NIGHT_KEYWORDS = /야간|심야|밤샘|night|tungi/i;
+
+/**
+ * Whether a job is night work: flagged "tonight", starting 20:00–04:59 KST
+ * (a shift that mostly falls in the legal 야간근로 window, 22:00–06:00), or
+ * described as night work in its title/duration (any supported language).
+ */
+export function isNightJob(job: {
+  urgencyType: string | null;
+  startDateTime: Date;
+  title: string;
+  durationDetails: string;
+}): boolean {
+  if (job.urgencyType === "TONIGHT") return true;
+  const kstHour = (job.startDateTime.getUTCHours() + 9) % 24;
+  if (kstHour >= 20 || kstHour < 5) return true;
+  return NIGHT_KEYWORDS.test(`${job.title} ${job.durationDetails}`);
+}
+
 /**
  * Radius-based job search.
  * TODO: Implement true distance filtering with PostGIS / earthdistance.

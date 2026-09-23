@@ -121,10 +121,12 @@ export default async function LandingPage() {
       {/* Stats */}
       <section className="bg-primary text-primary-foreground">
         <div className="container grid gap-8 py-14 text-center sm:grid-cols-3">
+          {/* Verifiable product facts only — no audience numbers until we
+              have real ones to show. */}
           {[
-            { value: "1,200+", label: t("landing.statsJobs") },
-            { value: "3,500+", label: t("landing.statsWorkers") },
-            { value: "3", label: t("landing.statsCities") },
+            { value: "₩0", label: t("landing.factWorkerFees") },
+            { value: "3", label: t("landing.factLanguages") },
+            { value: "1", label: t("landing.factFreePosts") },
           ].map((s) => (
             <div key={s.label}>
               <p className="text-4xl font-extrabold">{s.value}</p>

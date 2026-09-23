@@ -7,10 +7,19 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { JobFilters } from "@/components/jobs/JobFilters";
 import { JobGrid } from "@/components/jobs/JobGrid";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-import { buildJobWhereClause, sortJobs, type JobSort } from "@/lib/matching";
+import {
+  buildJobWhereClause,
+  isNightJob,
+  sortJobs,
+  type JobSort,
+} from "@/lib/matching";
 import { distanceBetween } from "@/lib/distance";
 import type { CategoryValue } from "@/lib/constants";
 import { getT } from "@/lib/getT";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+const PAGE_SIZE = 20;
 
 async function JobResults({
   searchParams,
@@ -19,6 +28,7 @@ async function JobResults({
   searchParams: Record<string, string | undefined>;
   workerId: string;
 }) {
+  const { t } = await getT();
   const where = buildJobWhereClause({
     city: searchParams.city,
     categories: searchParams.category
@@ -31,14 +41,9 @@ async function JobResults({
   if (searchParams.quick === "sameDayPay") {
     (where as Prisma.JobWhereInput).paymentTiming = "SAME_DAY";
   }
-  if (searchParams.quick === "night") {
-    (where as Prisma.JobWhereInput).durationDetails = {
-      contains: "night",
-      mode: "insensitive",
-    };
-  }
   if (searchParams.salaryType) {
-    (where as Prisma.JobWhereInput).salaryType = searchParams.salaryType as never;
+    (where as Prisma.JobWhereInput).salaryType =
+      searchParams.salaryType as never;
   }
   if (searchParams.paymentTiming) {
     (where as Prisma.JobWhereInput).paymentTiming =
@@ -54,7 +59,9 @@ async function JobResults({
       where,
       include: { employer: true },
       orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
-      take: 100,
+      // Filters below (distance, night) and sorting run in memory, so fetch a
+      // generous window and paginate after. Fine at pilot scale (one district).
+      take: 500,
     }),
   ]);
 
@@ -70,12 +77,16 @@ async function JobResults({
             latitude: profile!.currentLatitude,
             longitude: profile!.currentLongitude,
           },
-          job
+          job,
         )
       : null;
     distances[job.id] = km;
     return { ...job, distanceKm: km };
   });
+
+  if (searchParams.quick === "night") {
+    jobs = jobs.filter(isNightJob);
+  }
 
   // Distance filter (only meaningful with a location).
   const within = Number(searchParams.within);
@@ -88,7 +99,35 @@ async function JobResults({
   if (sort === "nearest" && !hasLocation) sort = "newest";
   jobs = sortJobs(jobs, sort);
 
-  return <JobGrid jobs={jobs.slice(0, 60)} distances={distances} />;
+  const page = Math.max(1, Math.floor(Number(searchParams.page)) || 1);
+  const shown = jobs.slice(0, page * PAGE_SIZE);
+  const moreParams = new URLSearchParams(
+    Object.entries(searchParams).filter(([, v]) => v != null) as [
+      string,
+      string,
+    ][],
+  );
+  moreParams.set("page", String(page + 1));
+
+  return (
+    <div className="space-y-4">
+      {jobs.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          {t("jobs.resultCount", { count: jobs.length })}
+        </p>
+      )}
+      <JobGrid jobs={shown} distances={distances} />
+      {shown.length < jobs.length && (
+        <div className="flex justify-center">
+          <Button variant="outline" asChild>
+            <Link href={`?${moreParams.toString()}`} scroll={false}>
+              {t("jobs.loadMore")}
+            </Link>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default async function WorkerJobsPage({
@@ -110,10 +149,16 @@ export default async function WorkerJobsPage({
 
   return (
     <div>
-      <PageHeader title={t("jobs.feedTitle")} description={t("jobs.feedDesc")} />
+      <PageHeader
+        title={t("jobs.feedTitle")}
+        description={t("jobs.feedDesc")}
+      />
       <JobFilters hasLocation={hasLocation} />
       <div className="mt-6">
-        <Suspense key={JSON.stringify(sp)} fallback={<LoadingSpinner />}>
+        <Suspense
+          key={JSON.stringify({ ...sp, page: undefined })}
+          fallback={<LoadingSpinner />}
+        >
           <JobResults searchParams={sp} workerId={session.user.id} />
         </Suspense>
       </div>

@@ -9,6 +9,7 @@ Use this for every release to staging or production. Tag releases as
 - [ ] `npm ci` installs cleanly
 - [ ] `npm run secrets:check` ✅
 - [ ] `npm run typecheck` ✅
+- [ ] `npm run lint` ✅
 - [ ] `npm run build` ✅
 - [ ] `npm run test:matching` ✅
 - [ ] `npm run storage:check` ✅
@@ -37,6 +38,7 @@ Use this for every release to staging or production. Tag releases as
 - [ ] Login works (worker / employer / admin)
 - [ ] Job post → approve → notification + SMS log
 - [ ] Admin → Ops → Test SMS works
+- [ ] `/api/cron/jobs-expire` with `CRON_SECRET` → `{ ok: true }`; no past-start jobs in the feed
 - [ ] Errors reaching Sentry
 - [ ] No error spike in logs for 15 min
 
