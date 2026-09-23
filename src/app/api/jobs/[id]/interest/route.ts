@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { interestSchema } from "@/lib/validations";
+import { isJobExpired } from "@/lib/job-expiry";
 import { Analytics } from "@/lib/analytics";
 import { NotificationService } from "@/lib/notifications";
 import { normalizeLocale, translate } from "@/lib/i18n";
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     include: { employer: true },
   });
   if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (job.status !== "OPEN" && job.status !== "FILLED") {
+  if ((job.status !== "OPEN" && job.status !== "FILLED") || isJobExpired(job)) {
     return NextResponse.json(
       { error: "This job is no longer accepting interest." },
       { status: 409 }

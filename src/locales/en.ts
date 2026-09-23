@@ -120,6 +120,7 @@ const en: Dictionary = {
       FILLED: "Filled",
       CANCELLED: "Cancelled",
       REJECTED: "Rejected",
+      EXPIRED: "Expired",
     },
     role: { WORKER: "Worker", EMPLOYER: "Employer", ADMIN: "Admin" },
   },

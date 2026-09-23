@@ -118,6 +118,7 @@ const ko = {
       FILLED: "모집 완료",
       CANCELLED: "취소됨",
       REJECTED: "반려됨",
+      EXPIRED: "기간 만료",
     },
     role: { WORKER: "근로자", EMPLOYER: "고용주", ADMIN: "관리자" },
   },

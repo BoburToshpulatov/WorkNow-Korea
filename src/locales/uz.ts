@@ -121,6 +121,7 @@ const uz: PartialDictionary = {
       FILLED: "To'ldirilgan",
       CANCELLED: "Bekor qilingan",
       REJECTED: "Rad etilgan",
+      EXPIRED: "Muddati tugagan",
     },
     role: { WORKER: "Ishchi", EMPLOYER: "Ish beruvchi", ADMIN: "Admin" },
   },

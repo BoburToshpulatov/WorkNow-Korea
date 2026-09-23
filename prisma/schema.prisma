@@ -19,6 +19,7 @@ enum JobStatus {
   FILLED
   CANCELLED
   REJECTED
+  EXPIRED
 }
 
 enum DurationType {

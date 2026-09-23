@@ -206,6 +206,7 @@ export const JOB_STATUS_LABELS: Record<string, string> = {
   FILLED: "모집 완료",
   CANCELLED: "취소됨",
   REJECTED: "반려됨",
+  EXPIRED: "기간 만료",
 };
 
 // ── Trust / verification (Phase 3) ──────────────────────────────────

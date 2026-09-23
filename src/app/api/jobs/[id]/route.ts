@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { jobSchema } from "@/lib/validations";
+import { isJobExpired } from "@/lib/job-expiry";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -22,10 +23,11 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   });
   if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Live jobs are public. Non-live jobs (PENDING/REJECTED/CANCELLED) are only
+  // Live jobs are public. Non-live jobs (PENDING/REJECTED/CANCELLED/EXPIRED) are only
   // visible to the owning employer or an admin, so contact details and
   // unapproved listings are not exposed to the public.
-  const isLive = job.status === "OPEN" || job.status === "FILLED";
+  const isLive =
+    (job.status === "OPEN" || job.status === "FILLED") && !isJobExpired(job);
   if (!isLive) {
     const session = await auth();
     const isAdmin = session?.user?.role === "ADMIN";

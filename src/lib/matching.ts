@@ -1,5 +1,6 @@
 import type { AvailabilityStatus, Prisma } from "@prisma/client";
 import type { CategoryValue } from "./constants";
+import { notExpiredWhere } from "./job-expiry";
 
 // ── Availability matching (Phase 2) ─────────────────────────────────
 /** Statuses that count as "ready right away" — targeted by urgent jobs. */
@@ -41,12 +42,16 @@ export interface MatchCriteria {
 /**
  * Build a Prisma `where` clause for searching OPEN jobs against criteria.
  * Matches by province (city), district, category, language, and urgency.
+ * Always excludes jobs past their start-time grace window (see job-expiry).
  * TODO: replace district matching with PostGIS radius once lat/lng is captured.
  */
 export function buildJobWhereClause(
   criteria: MatchCriteria
 ): Prisma.JobWhereInput {
-  const where: Prisma.JobWhereInput = { status: "OPEN" };
+  const where: Prisma.JobWhereInput = {
+    status: "OPEN",
+    AND: [notExpiredWhere()],
+  };
 
   if (criteria.city) {
     where.city = { equals: criteria.city, mode: "insensitive" };

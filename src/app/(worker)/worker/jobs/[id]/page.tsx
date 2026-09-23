@@ -27,6 +27,7 @@ import { getT } from "@/lib/getT";
 import { formatJobSalary, formatDateTime, formatJobLocation } from "@/lib/i18n";
 import { Analytics } from "@/lib/analytics";
 import { getEmployerStats, employerTier } from "@/lib/trust";
+import { isJobExpired } from "@/lib/job-expiry";
 
 export default async function JobDetailPage({
   params,
@@ -43,8 +44,14 @@ export default async function JobDetailPage({
     include: { employer: true },
   });
   // Workers may only view live jobs. PENDING (awaiting admin approval),
-  // REJECTED, and CANCELLED jobs must not expose contact details.
-  if (!job || (job.status !== "OPEN" && job.status !== "FILLED")) notFound();
+  // REJECTED, CANCELLED, and EXPIRED jobs must not expose contact details.
+  if (
+    !job ||
+    (job.status !== "OPEN" && job.status !== "FILLED") ||
+    isJobExpired(job)
+  ) {
+    notFound();
+  }
 
   const [interest, saved] = await Promise.all([
     prisma.jobInterest.findUnique({

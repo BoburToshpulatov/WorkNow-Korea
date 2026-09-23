@@ -237,7 +237,7 @@ export const reportModerationSchema = z.object({
 });
 
 export const adminJobStatusSchema = z.object({
-  status: z.enum(["PENDING", "OPEN", "FILLED", "CANCELLED", "REJECTED"]),
+  status: z.enum(["PENDING", "OPEN", "FILLED", "CANCELLED", "REJECTED", "EXPIRED"]),
 });
 
 // Phase 4 — employer updates an applicant's lifecycle status.

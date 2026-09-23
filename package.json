@@ -15,6 +15,7 @@
     "db:check-users": "tsx prisma/check-users.ts",
     "test:matching": "tsx prisma/scripts/test-matching.ts",
     "documents:cleanup": "tsx prisma/scripts/cleanup-documents.ts",
+    "jobs:expire": "tsx prisma/scripts/expire-jobs.ts",
     "storage:check": "tsx prisma/scripts/storage-check.ts",
     "rate-limit:check": "tsx prisma/scripts/rate-limit-check.ts",
     "secrets:check": "tsx prisma/scripts/secrets-check.ts",

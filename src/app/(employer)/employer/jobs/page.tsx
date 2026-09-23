@@ -91,7 +91,7 @@ export default async function MyJobsPage() {
                       <Copy className="h-4 w-4" /> {t("employer.repost")}
                     </Link>
                   </Button>
-                  {job.status !== "CANCELLED" && (
+                  {job.status !== "CANCELLED" && job.status !== "EXPIRED" && (
                     <CancelJobButton jobId={job.id} />
                   )}
                 </div>
