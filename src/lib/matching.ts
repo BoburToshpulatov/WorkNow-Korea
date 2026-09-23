@@ -1,6 +1,7 @@
 import type { AvailabilityStatus, Prisma } from "@prisma/client";
 import type { CategoryValue } from "./constants";
 import { notExpiredWhere } from "./job-expiry";
+import { kstHour } from "./time";
 
 // ── Availability matching (Phase 2) ─────────────────────────────────
 /** Statuses that count as "ready right away" — targeted by urgent jobs. */
@@ -163,8 +164,8 @@ export function isNightJob(job: {
   durationDetails: string;
 }): boolean {
   if (job.urgencyType === "TONIGHT") return true;
-  const kstHour = (job.startDateTime.getUTCHours() + 9) % 24;
-  if (kstHour >= 20 || kstHour < 5) return true;
+  const hour = kstHour(job.startDateTime);
+  if (hour >= 20 || hour < 5) return true;
   return NIGHT_KEYWORDS.test(`${job.title} ${job.durationDetails}`);
 }
 

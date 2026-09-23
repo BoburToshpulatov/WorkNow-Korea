@@ -273,3 +273,26 @@ export const DISCLAIMER_TEXT =
   "당사는 근로자를 고용·파견·관리하지 않으며, 고용주와 근로자 간의 어떠한 계약의 당사자도 아닙니다. " +
   "채용, 급여, 근로 조건 또는 고용 관계를 보장하지 않습니다. " +
   "모든 내용은 상대방과 직접 확인하시고, 대한민국 노동 관계 법령을 준수해 주세요.";
+
+// ── Minimum wage (최저임금) ──────────────────────────────────────────
+// Update every January (고용노동부 고시). Posting below this is illegal, so
+// job forms reject it.
+export const MINIMUM_WAGE = { year: 2026, hourly: 10_320 } as const;
+
+/**
+ * Lowest legal salary for a pay cadence, or null when it can't be judged
+ * (FIXED lump sums). Daily uses a 4-hour floor so half-day gigs still post;
+ * monthly uses the statutory 209 hours.
+ */
+export function minimumSalaryFor(salaryType: string): number | null {
+  switch (salaryType) {
+    case "HOURLY":
+      return MINIMUM_WAGE.hourly;
+    case "DAILY":
+      return MINIMUM_WAGE.hourly * 4;
+    case "MONTHLY":
+      return MINIMUM_WAGE.hourly * 209;
+    default:
+      return null;
+  }
+}

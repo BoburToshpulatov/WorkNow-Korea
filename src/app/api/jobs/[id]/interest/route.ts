@@ -7,6 +7,11 @@ import { isJobExpired } from "@/lib/job-expiry";
 import { Analytics } from "@/lib/analytics";
 import { NotificationService } from "@/lib/notifications";
 import { normalizeLocale, translate } from "@/lib/i18n";
+import { smsNewInterest } from "@/lib/sms-templates";
+import { env } from "@/lib/env";
+
+/** Employer gets an SMS for the first N interested workers on each job. */
+const EMPLOYER_SMS_INTERESTS_PER_JOB = 3;
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -68,6 +73,33 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       }),
       jobId: job.id,
     });
+
+    // Employers aren't watching the app — text them for the first few
+    // applicants so they call back while the worker is still available.
+    const interestCount = await prisma.jobInterest.count({ where: { jobId: id } });
+    const employerPrefs = await prisma.notificationPreference.findUnique({
+      where: { userId: job.employer.userId },
+    });
+    if (
+      employerUser &&
+      interestCount <= EMPLOYER_SMS_INTERESTS_PER_JOB &&
+      employerPrefs?.smsEnabled !== false
+    ) {
+      void NotificationService.sendSmsNotification(
+        employerUser.id,
+        job.contactPhone || employerUser.phone,
+        smsNewInterest(
+          {
+            workerName: worker?.name ?? translate("enums.role.WORKER", locale),
+            jobTitle: job.title,
+            link: `${env.appUrl.replace(/\/$/, "")}/employer/jobs/${job.id}/applicants`,
+          },
+          locale
+        ),
+        "NEW_INTEREST",
+        job.id
+      );
+    }
   }
 
   return NextResponse.json({ interest }, { status: 201 });

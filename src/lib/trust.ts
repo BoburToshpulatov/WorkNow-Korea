@@ -129,3 +129,18 @@ export async function getWorkerStats(userId: string): Promise<WorkerStats> {
     joinedAt: profile?.createdAt ?? new Date(),
   };
 }
+
+/**
+ * Initial status for a newly posted job. Verified employers in good standing
+ * go live immediately (and workers are alerted at once) — urgent hiring can't
+ * wait on manual approval. Everyone else stays PENDING for admin review.
+ * Admins can still reject/cancel a live job from Admin → Jobs.
+ */
+export function initialJobStatus(employer: {
+  verificationStatus: string;
+  flaggedForReview: boolean;
+}): "OPEN" | "PENDING" {
+  return employer.verificationStatus === "VERIFIED" && !employer.flaggedForReview
+    ? "OPEN"
+    : "PENDING";
+}

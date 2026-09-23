@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { rehireSchema } from "@/lib/validations";
 import { NotificationService } from "@/lib/notifications";
-import { smsRehireInvite } from "@/lib/sms-templates";
+import { smsJobLink, smsRehireInvite } from "@/lib/sms-templates";
 import { normalizeLocale, translate } from "@/lib/i18n";
 
 /**
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
   const prefs = worker.notificationPrefs;
   if (prefs?.smsEnabled && prefs.smsConsentAt) {
     const sms = smsRehireInvite(
-      { employerName: employer.name, jobTitle: job.title },
+      { employerName: employer.name, jobTitle: job.title, link: smsJobLink(job.id) },
       locale
     );
     await NotificationService.sendSmsNotification(

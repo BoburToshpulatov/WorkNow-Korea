@@ -5,6 +5,8 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { jobSchema } from "@/lib/validations";
 import { buildJobWhereClause } from "@/lib/matching";
 import { notifyMatchingWorkers } from "@/lib/notifications";
+import { initialJobStatus } from "@/lib/trust";
+import { isJobExpired } from "@/lib/job-expiry";
 import { Analytics } from "@/lib/analytics";
 import type { CategoryValue } from "@/lib/constants";
 import type { Prisma } from "@prisma/client";
@@ -75,6 +77,9 @@ export async function POST(req: NextRequest) {
     );
   }
   const d = parsed.data;
+  if (isJobExpired({ startDateTime: d.startDateTime, durationType: d.durationType })) {
+    return NextResponse.json({ error: "START_IN_PAST" }, { status: 400 });
+  }
 
   const job = await prisma.job.create({
     data: {
@@ -110,15 +115,14 @@ export async function POST(req: NextRequest) {
       pickupAvailable: d.pickupAvailable,
       transportNote: d.transportNote || null,
       safetyNotes: d.safetyNotes || null,
-      status: "PENDING",
+      status: initialJobStatus(employer),
     },
   });
 
   void Analytics.jobCreated(job.id, session.user.id);
 
-  // New jobs start as PENDING (admin approval). Notification fan-out happens
-  // when an admin approves the job (status -> OPEN). See admin/jobs PATCH.
-  // If the job is somehow already OPEN, fan out immediately.
+  // Verified employers go live immediately → fan out now. Otherwise the job is
+  // PENDING and fan-out happens on admin approval (see admin/jobs PATCH).
   if (job.status === "OPEN") {
     void notifyMatchingWorkers(job.id).catch(() => undefined);
   }

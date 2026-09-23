@@ -1,8 +1,15 @@
 /**
  * SMS message templates (Phase 4). Short, plain-text, locale-aware.
  * Fallback order: requested locale → en → ko.
+ * No emoji: Korean carrier SMS/LMS is EUC-KR and cannot carry them.
  */
 import type { Locale } from "@/lib/i18n";
+import { env } from "@/lib/env";
+
+/** Short job link for texts — `/j/<id>` routes through login if needed. */
+export function smsJobLink(jobId: string): string {
+  return `${env.appUrl.replace(/\/$/, "")}/j/${jobId}`;
+}
 
 type Lset = { ko: string; en: string; uz?: string };
 
@@ -21,15 +28,16 @@ export interface JobAlertVars {
   district: string;
   salary: string;
   startTime: string;
+  link: string;
 }
 
 export function smsNewMatchingJob(v: JobAlertVars, locale: Locale): string {
   return fill(
     pick(
       {
-        ko: "[WorkNow] 새 일자리: {category}, {district}, {salary}, {startTime}. 앱에서 확인하세요.",
-        en: "[WorkNow] New job: {category}, {district}, {salary}, {startTime}. Open the app to view.",
-        uz: "[WorkNow] Yangi ish: {category}, {district}, {salary}, {startTime}. Ilovada ko‘ring.",
+        ko: "[WorkNow] 새 일자리: {category}, {district}, {salary}, {startTime}\n{link}",
+        en: "[WorkNow] New job: {category}, {district}, {salary}, {startTime}\n{link}",
+        uz: "[WorkNow] Yangi ish: {category}, {district}, {salary}, {startTime}\n{link}",
       },
       locale
     ),
@@ -42,9 +50,9 @@ export function smsUrgentJob(v: JobAlertVars, locale: Locale): string {
   return fill(
     pick(
       {
-        ko: "[WorkNow] 🚨 긴급 모집: {category}, {district}, {salary}, {startTime}. 지금 앱에서 확인하세요.",
-        en: "[WorkNow] 🚨 Urgent: {category}, {district}, {salary}, {startTime}. Open the app now.",
-        uz: "[WorkNow] 🚨 Shoshilinch: {category}, {district}, {salary}, {startTime}. Hoziroq ilovada ko‘ring.",
+        ko: "[WorkNow] 긴급 모집: {category}, {district}, {salary}, {startTime}\n지금 확인: {link}",
+        en: "[WorkNow] URGENT: {category}, {district}, {salary}, {startTime}\nView now: {link}",
+        uz: "[WorkNow] Shoshilinch: {category}, {district}, {salary}, {startTime}\nHoziroq ko‘ring: {link}",
       },
       locale
     ),
@@ -54,15 +62,15 @@ export function smsUrgentJob(v: JobAlertVars, locale: Locale): string {
 
 /** Rehire invite from an employer the worker has worked with before. */
 export function smsRehireInvite(
-  v: { employerName: string; jobTitle: string },
+  v: { employerName: string; jobTitle: string; link: string },
   locale: Locale
 ): string {
   return fill(
     pick(
       {
-        ko: "[WorkNow] {employerName}님이 다시 함께 일하자고 초대했습니다: {jobTitle}. 앱에서 확인하세요.",
-        en: "[WorkNow] {employerName} invited you to work again: {jobTitle}. Open the app to view.",
-        uz: "[WorkNow] {employerName} sizni yana ishlashga taklif qildi: {jobTitle}. Ilovada ko‘ring.",
+        ko: "[WorkNow] {employerName}님이 다시 함께 일하자고 초대했습니다: {jobTitle}\n{link}",
+        en: "[WorkNow] {employerName} invited you to work again: {jobTitle}\n{link}",
+        uz: "[WorkNow] {employerName} sizni yana ishlashga taklif qildi: {jobTitle}\n{link}",
       },
       locale
     ),
@@ -71,15 +79,15 @@ export function smsRehireInvite(
 }
 
 export function smsNewInterest(
-  v: { workerName: string; jobTitle: string },
+  v: { workerName: string; jobTitle: string; link: string },
   locale: Locale
 ): string {
-  // Employer-facing — Uzbek not required; defaults to KO/EN.
   return fill(
     pick(
       {
-        ko: "[WorkNow] 새 지원자: {workerName}님이 {jobTitle}에 관심을 표시했습니다.",
-        en: "[WorkNow] New applicant: {workerName} is interested in {jobTitle}.",
+        ko: "[WorkNow] 새 지원자: {workerName}님이 {jobTitle}에 관심을 표시했습니다. 연락하기: {link}",
+        en: "[WorkNow] New applicant: {workerName} is interested in {jobTitle}. Contact: {link}",
+        uz: "[WorkNow] Yangi nomzod: {workerName} {jobTitle} ishiga qiziqdi. Bog‘lanish: {link}",
       },
       locale
     ),

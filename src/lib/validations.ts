@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { minimumSalaryFor } from "./constants";
 
 const phoneRegex = /^[0-9+\-\s()]{7,20}$/;
 
@@ -107,7 +108,26 @@ export const jobSchema = z.object({
   pickupAvailable: z.boolean().default(false),
   transportNote: z.string().optional().or(z.literal("")),
   safetyNotes: z.string().optional().or(z.literal("")),
-});
+}).superRefine(refineSalary);
+
+/**
+ * Salary must be positive and at least the legal minimum wage for its cadence
+ * (see MINIMUM_WAGE). FIXED (lump-sum) pay only needs to be positive.
+ * Messages are i18n keys — forms render them with t().
+ */
+function refineSalary(
+  v: { salaryAmount: number; salaryType: string },
+  ctx: z.RefinementCtx
+) {
+  if (v.salaryAmount <= 0) {
+    ctx.addIssue({ code: "custom", path: ["salaryAmount"], message: "jobForm.salaryRequired" });
+    return;
+  }
+  const min = minimumSalaryFor(v.salaryType);
+  if (min != null && v.salaryAmount < min) {
+    ctx.addIssue({ code: "custom", path: ["salaryAmount"], message: "jobForm.belowMinimumWage" });
+  }
+}
 
 // Phase 4 — Quick post: only the essentials. The API fills sensible defaults
 // for the remaining required Job fields.
@@ -122,7 +142,7 @@ export const quickJobSchema = z.object({
   workersNeeded: z.coerce.number().int().min(1).max(500),
   contactPhone: z.string().regex(phoneRegex, "Enter a valid phone number"),
   isUrgent: z.boolean().default(false),
-});
+}).superRefine(refineSalary);
 
 export const workerProfileSchema = z.object({
   name: z.string().min(1, "Name is required"),

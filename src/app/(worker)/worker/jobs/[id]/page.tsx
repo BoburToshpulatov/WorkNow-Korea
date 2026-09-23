@@ -248,12 +248,20 @@ export default async function JobDetailPage({
         </div>
       )}
 
-      {/* Actions */}
-      <div className="sticky bottom-20 mt-6 space-y-3 md:bottom-6">
-        <InterestButton jobId={job.id} initiallyInterested={!!interest} />
+      {/* Secondary actions */}
+      <div className="mt-6 space-y-3">
         <ContactButtons phone={job.contactPhone} kakaoId={job.kakaoId} />
         <SaveJobButton jobId={job.id} initiallySaved={!!saved} />
         <ReportButton jobId={job.id} />
+      </div>
+
+      {/* Primary action — only this stays pinned above the bottom nav */}
+      <div className="sticky bottom-20 z-10 mt-4 md:bottom-6">
+        <InterestButton
+          jobId={job.id}
+          phone={job.contactPhone}
+          initiallyInterested={!!interest}
+        />
       </div>
     </div>
   );

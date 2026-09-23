@@ -39,3 +39,14 @@ export function formatRelativeTime(
   const dfnsLocale = locale === "en" ? enUS : locale === "uz" ? uz : ko;
   return formatDistanceToNow(d, { addSuffix: true, locale: dfnsLocale });
 }
+
+/**
+ * Validate a post-login `next` path: same-origin absolute paths only, so
+ * `?next=` can't be used as an open redirect (`//evil.com`, `/\evil.com`).
+ */
+export function safeNextPath(next: string | null | undefined): string | null {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) {
+    return null;
+  }
+  return next;
+}

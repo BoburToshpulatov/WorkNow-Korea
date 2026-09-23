@@ -26,6 +26,28 @@ Launch-readiness fixes found by walking the worker flow on mobile.
 - Homepage showed invented audience numbers (1,200+ jobs / 3,500+ workers);
   replaced with verifiable facts (₩0 worker fees, 3 languages, 1 free post).
 
+- **Times were computed in the server's timezone (UTC on Vercel).** Quiet
+  hours, night-job detection, and every rendered/SMS start time were 9 hours
+  off in production; all now use KST (`src/lib/time.ts`).
+- Jobs could be posted with ₩0 or below-minimum-wage pay. Job forms now
+  enforce the 2026 minimum wage (₩10,320/h; daily 4h floor; monthly 209h).
+- Jobs could be posted with a start time already past the expiry window.
+
+### Changed
+- **Verified employers' jobs go live immediately** and alert workers at once;
+  unverified or flagged employers still go through admin approval.
+- **Quick post** prefills from the employer's last job, defaults the start to
+  the next full hour, and the success screen says whether the job is live.
+- **Worker job page:** one pinned action — "I'm interested — call now" records
+  interest and opens the dialer in one tap (so every call appears in the
+  employer's applicant list); "just show interest" is secondary. Copy/Kakao/
+  save/report moved out of the sticky bar.
+- **SMS alerts** include a short job link (`/j/<id>`, which routes through
+  login and back) and no longer contain emoji (not supported by Korean SMS).
+- **Employers get an SMS** for the first 3 interested workers per job, with a
+  link to the applicants page (skipped if they turned SMS off).
+- Login honors a safe same-origin `?next=` path.
+
 ### Added
 - Feed pagination (20 per page, "Load more") and a result count.
 - ESLint config (`next/core-web-vitals` + `next/typescript`); `npm run lint`

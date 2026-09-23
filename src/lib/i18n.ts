@@ -14,6 +14,7 @@ import ko from "@/locales/ko";
 import en from "@/locales/en";
 import uz from "@/locales/uz";
 import type { SalaryTypeKey } from "@/lib/utils";
+import { APP_TIME_ZONE } from "@/lib/time";
 
 export type Locale = "ko" | "en" | "uz";
 
@@ -152,6 +153,8 @@ export function formatDateTime(
     dateStyle: "medium",
     timeStyle: "short",
     hourCycle: locale === "en" ? "h12" : "h23",
+    // Always KST: server-rendered pages and SMS run on UTC hosts.
+    timeZone: APP_TIME_ZONE,
   }).format(d);
 }
 

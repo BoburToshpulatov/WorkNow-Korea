@@ -13,6 +13,7 @@ import {
   DURATION_TYPE_LABELS,
   SALARY_TYPE_LABELS,
   PAYMENT_TIMING_LABELS,
+  MINIMUM_WAGE,
 } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,7 +123,11 @@ export function JobForm({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error ?? t("jobForm.saveFailed"));
+        throw new Error(
+          data?.error === "START_IN_PAST"
+            ? t("jobForm.startInPast")
+            : t("jobForm.saveFailed")
+        );
       }
       toast(
         jobId ? t("jobForm.updatedToast") : t("jobForm.createdToast"),
@@ -344,9 +349,12 @@ export function JobForm({
               min={0}
               {...register("salaryAmount")}
             />
-            {errors.salaryAmount && (
+            {errors.salaryAmount?.message && (
               <p className="text-xs text-destructive">
-                {errors.salaryAmount.message}
+                {t(errors.salaryAmount.message, {
+                  year: MINIMUM_WAGE.year,
+                  hourly: MINIMUM_WAGE.hourly.toLocaleString("ko-KR"),
+                })}
               </p>
             )}
           </div>

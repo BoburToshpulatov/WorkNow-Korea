@@ -9,19 +9,14 @@ import {
 } from "./notifications/providers";
 import { captureError } from "./error-monitoring";
 import { normalizeLocale, translate, formatJobSalary, formatDateTime } from "./i18n";
-import { smsNewMatchingJob, smsUrgentJob } from "./sms-templates";
-import { isAvailableForJob } from "./matching";
+import { smsJobLink, smsNewMatchingJob, smsUrgentJob } from "./sms-templates";
+import { isAvailableForJob, isNightJob } from "./matching";
+import { kstHour } from "./time";
 
-/** True if the given time falls in the typical night window (22:00–06:00). */
-function isNightHour(d: Date): boolean {
-  const h = d.getHours();
-  return h >= 22 || h < 6;
-}
-
-/** True if `now` is within [start,end) quiet hours (handles overnight wrap). */
+/** True if `now` is within [start,end) KST quiet hours (handles overnight wrap). */
 function inQuietHours(start: number | null, end: number | null, now: Date): boolean {
   if (start == null || end == null) return false;
-  const h = now.getHours();
+  const h = kstHour(now);
   return start <= end ? h >= start && h < end : h >= start || h < end;
 }
 
@@ -227,7 +222,7 @@ export async function notifyMatchingWorkers(jobId: string): Promise<number> {
       include: { user: { include: { workerProfile: true } } },
     });
 
-    const nightJob = isNightHour(job.startDateTime);
+    const nightJob = isNightJob(job);
     const now = new Date();
 
     let sent = 0;
@@ -283,6 +278,7 @@ export async function notifyMatchingWorkers(jobId: string): Promise<number> {
           district: job.district ?? job.city,
           salary: formatJobSalary(job.salaryAmount, job.salaryType, locale),
           startTime: formatDateTime(job.startDateTime, locale),
+          link: smsJobLink(job.id),
         };
         const sms = job.isUrgent
           ? smsUrgentJob(alertVars, locale)

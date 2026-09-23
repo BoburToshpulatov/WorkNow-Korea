@@ -430,6 +430,9 @@ const en: Dictionary = {
       "Try adjusting your filters or check back soon — new jobs are posted every day.",
     interested: "I'm interested",
     interestedDone: "Interested ✓",
+    interestAndCall: "I'm interested — call now",
+    interestOnly: "Just show interest (employer calls you)",
+    withdrawInterest: "Withdraw interest",
     interestConfirmTitle: "You've shown interest.",
     interestConfirmBody:
       "The employer has been notified. Contact them directly using the details below.",
@@ -516,6 +519,10 @@ const en: Dictionary = {
       "Your job goes live after approval, and matching workers are notified automatically.",
     quickPostAddDetails: "Add more details",
     quickPostViewJobs: "View my jobs",
+    quickPostLiveTitle: "Your job is live!",
+    quickPostLiveBody: "Jobs from verified employers go live immediately. Matching workers are being alerted now, and we'll text you when someone is interested.",
+    quickPostPrefilled: "Filled in from your last job — change only what's different.",
+    quickPostReviewNote: "Complete verification and future jobs go live instantly, without approval.",
     repostConfirm: "Previous job copied. Please confirm time and salary.",
     editTitle: "Edit job",
     profileTitle: "Business profile",
@@ -543,6 +550,10 @@ const en: Dictionary = {
   },
 
   jobForm: {
+    salaryRequired: "Enter the pay.",
+    belowMinimumWage: "Pay can't be below the {year} minimum wage (₩{hourly}/hour).",
+    minimumWageHint: "{year} minimum wage: ₩{hourly}/hour",
+    startInPast: "That start time has already passed. Pick a new time.",
     basics: "Job basics",
     title: "Job title",
     titlePlaceholder: "e.g. Factory line worker — day shift",
