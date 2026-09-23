@@ -15,6 +15,33 @@ interface DocMeta {
   adminNote: string | null;
 }
 
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // keep in sync with src/lib/uploads.ts
+const HEIC_TYPES = ["image/heic", "image/heif"];
+
+/**
+ * Re-encode a photo as JPEG (max 2400px on the long side). Shrinks large phone
+ * photos under the upload limit and converts HEIC where the browser can decode
+ * it (Safari). Returns null if the browser can't read the image.
+ */
+async function toUploadableJpeg(file: File): Promise<File | null> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.85)
+    );
+    if (!blob) return null;
+    const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+    return new File([blob], name, { type: "image/jpeg" });
+  } catch {
+    return null;
+  }
+}
+
 const STATUS_VARIANT: Record<string, "success" | "muted" | "urgent"> = {
   APPROVED: "success",
   PENDING: "muted",
@@ -50,12 +77,21 @@ export function DocumentUpload({
     load();
   }, [load]);
 
-  const onPick = async (file: File) => {
-    if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type)) {
+  const onPick = async (picked: File) => {
+    let file: File | null = picked;
+    const isHeic = HEIC_TYPES.includes(picked.type);
+    if (!isHeic && !["image/jpeg", "image/png", "application/pdf"].includes(picked.type)) {
       toast(t("ts.docTypeError"), "error");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (isHeic || (picked.type.startsWith("image/") && picked.size > MAX_UPLOAD_BYTES)) {
+      file = await toUploadableJpeg(picked);
+      if (!file) {
+        toast(t("ts.docTypeError"), "error");
+        return;
+      }
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
       toast(t("ts.docSizeError"), "error");
       return;
     }
@@ -117,7 +153,7 @@ export function DocumentUpload({
         <input
           ref={inputRef}
           type="file"
-          accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+          accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

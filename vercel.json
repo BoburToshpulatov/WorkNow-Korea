@@ -1,6 +1,7 @@
 {
+  "regions": ["icn1"],
   "crons": [
-    { "path": "/api/cron/jobs-expire", "schedule": "0 * * * *" },
+    { "path": "/api/cron/jobs-expire", "schedule": "0 15 * * *" },
     { "path": "/api/cron/documents-cleanup", "schedule": "0 18 * * *" }
   ]
 }

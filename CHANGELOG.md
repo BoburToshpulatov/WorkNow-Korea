@@ -48,6 +48,29 @@ Launch-readiness fixes found by walking the worker flow on mobile.
   link to the applicants page (skipped if they turned SMS off).
 - Login honors a safe same-origin `?next=` path.
 
+- **`/api/health` was prerendered at build time**, so it always reported the
+  build's env and "db ok" even with the database down. Now per request.
+- Uploads up to 5MB exceeded Vercel's 4.5MB body limit. Cap is 4MB and phone
+  photos (incl. HEIC where the browser can decode it) are downscaled to JPEG
+  in the browser first.
+- The seed wipes every table; it now refuses `APP_ENV=production` and needs
+  `ALLOW_STAGING_SEED=true` on staging.
+
+### Deployment
+- Startup validation is fatal on **staging** as well as production, and also
+  requires S3 credentials, https `APP_URL`, `CRON_SECRET`, and Upstash redis.
+  A Vercel deploy with `APP_ENV=development` refuses to boot.
+- `DIRECT_URL` for migrations (pooled `DATABASE_URL` + direct URL on
+  Supabase/Neon); `postinstall: prisma generate`; `build:deploy` runs
+  `prisma migrate deploy` before building; Node pinned to 22.x.
+- `vercel.json`: Seoul region (`icn1`), Hobby-compatible daily crons; hourly
+  job expiry via `.github/workflows/cron.yml`.
+- Staging shows a "test server" banner; non-production is `noindex` and
+  `robots.txt` disallows everything.
+- `npm run env:check -- <file>` validates a target env file;
+  `npm run smoke -- <url>` runs post-deploy checks; health reports `commit`.
+- STAGING_DEPLOYMENT_PLAN.md rewritten as a step-by-step account setup guide.
+
 ### Added
 - Feed pagination (20 per page, "Load more") and a result count.
 - ESLint config (`next/core-web-vitals` + `next/typescript`); `npm run lint`

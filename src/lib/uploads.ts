@@ -7,7 +7,9 @@
  */
 import { getStorage, safeStoredName } from "@/lib/storage";
 
-export const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
+// 4MB: Vercel rejects request bodies over 4.5MB, and multipart adds overhead.
+// Large phone photos are downscaled in the browser before upload.
+export const MAX_FILE_BYTES = 4 * 1024 * 1024;
 
 // Allowlist by MIME + extension. Executable types are rejected by omission.
 const ALLOWED: Record<string, string> = {

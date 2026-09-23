@@ -29,6 +29,7 @@ const uz: PartialDictionary = {
   },
 
   common: {
+    stagingBanner: "Sinov serveri — bu haqiqiy ishlar emas",
     salary: "Maosh",
     location: "Hudud",
     workersNeeded: "Kerakli ishchilar",
@@ -234,7 +235,7 @@ const uz: PartialDictionary = {
     docPrivacy:
       "Hujjatlarda shaxsiy ma'lumot bo'lishi mumkin. Faqat adminlar ko'radi; ish beruvchilarga ko'rsatilmaydi. Faqat zarur hujjatni yuklang.",
     docTypeError: "Faqat jpg, png, pdf yuklash mumkin",
-    docSizeError: "Fayl 5MB dan oshmasligi kerak",
+    docSizeError: "PDF fayl 4MB dan oshmasligi kerak (rasmlar avtomatik kichraytiriladi)",
     docTypeBUSINESS_REGISTRATION: "Biznes ro'yxati",
     docTypeID_CARD: "Shaxsiy guvohnoma",
     docTypeVISA_DOCUMENT: "Viza hujjati",

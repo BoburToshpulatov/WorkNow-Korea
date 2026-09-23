@@ -30,6 +30,7 @@ Built with **Next.js 14 (App Router)**, **TypeScript**, **Tailwind CSS**, **Pris
    | Variable          | Description                                            |
    | ----------------- | ------------------------------------------------------ |
    | `DATABASE_URL`    | PostgreSQL connection string                           |
+   | `DIRECT_URL`      | Unpooled connection for migrations (locally: same)     |
    | `NEXTAUTH_SECRET` | Random secret for session signing                      |
    | `NEXTAUTH_URL`    | App URL, e.g. `http://localhost:3000`                  |
    | `AUTH_SECRET`     | Auth.js v5 secret — set to the same value as the above |

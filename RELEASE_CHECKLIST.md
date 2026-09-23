@@ -23,18 +23,20 @@ Use this for every release to staging or production. Tag releases as
 - [ ] Migration is backward-compatible or has a rollback plan
 
 ## Environment checks
-- [ ] All required env vars set for the target (see STAGING_DEPLOYMENT_PLAN §9)
+- [ ] All required env vars set for the target (see STAGING_DEPLOYMENT_PLAN §6)
+- [ ] `npm run env:check -- .env.<target>` ✅ (from `vercel env pull`)
 - [ ] `APP_ENV` correct (`staging` / `production`)
 - [ ] Production: `UPLOAD_STORAGE=s3`, https `APP_URL`, non-placeholder secrets
 - [ ] If `NOTIFICATION_PROVIDER=sms`, all SMS env vars present (startup validates)
 
 ## Deploy
 - [ ] Deploy the green build
-- [ ] Run `prisma migrate deploy`
+- [ ] Migrations applied (`build:deploy` runs `prisma migrate deploy`)
 - [ ] (staging only) `npm run db:seed` if needed
 
 ## Post-deploy checks
-- [ ] `GET /api/health` → 200
+- [ ] `CRON_SECRET=… npm run smoke -- <APP_URL>` ✅ (health, pages, short link, locked cron/docs)
+- [ ] `/api/health` `commit` matches the released SHA
 - [ ] Login works (worker / employer / admin)
 - [ ] Job post → approve → notification + SMS log
 - [ ] Admin → Ops → Test SMS works

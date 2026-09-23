@@ -4,6 +4,18 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
+  // The seed wipes every table. Never allow it against production, and make
+  // staging opt in explicitly so a mistyped DATABASE_URL can't erase real data.
+  const appEnv = process.env.APP_ENV ?? "development";
+  if (appEnv === "production") {
+    throw new Error("Refusing to seed: APP_ENV=production (seed deletes all data).");
+  }
+  if (appEnv === "staging" && process.env.ALLOW_STAGING_SEED !== "true") {
+    throw new Error(
+      "Refusing to seed staging without ALLOW_STAGING_SEED=true (seed deletes all data)."
+    );
+  }
+
   console.log("Seeding WorkNow Korea…");
 
   // Clean slate (order matters for FKs)

@@ -28,6 +28,7 @@ const en: Dictionary = {
   },
 
   common: {
+    stagingBanner: "Test server — these are not real jobs",
     salary: "Salary",
     location: "Location",
     workersNeeded: "Workers needed",
@@ -257,7 +258,7 @@ const en: Dictionary = {
     docPrivacy:
       "Documents may contain sensitive information. Only admins review them — they are never shown to employers or workers. Upload only what's required for verification.",
     docTypeError: "Only jpg, png, and pdf files are allowed",
-    docSizeError: "File must be 5MB or smaller",
+    docSizeError: "PDFs must be 4MB or smaller (photos are shrunk automatically)",
     docTypeBUSINESS_REGISTRATION: "Business registration",
     docTypeID_CARD: "ID card",
     docTypeVISA_DOCUMENT: "Visa document",

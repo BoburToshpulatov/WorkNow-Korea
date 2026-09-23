@@ -26,6 +26,7 @@ const ko = {
   },
 
   common: {
+    stagingBanner: "테스트 서버입니다 — 실제 일자리가 아닙니다",
     salary: "급여",
     location: "지역",
     workersNeeded: "모집 인원",
@@ -269,7 +270,7 @@ const ko = {
     docPrivacy:
       "서류에는 민감한 개인정보가 포함될 수 있습니다. 관리자만 검토하며, 고용주·근로자에게 공개되지 않습니다. 인증에 꼭 필요한 서류만 업로드하세요.",
     docTypeError: "jpg, png, pdf 파일만 업로드할 수 있습니다",
-    docSizeError: "파일 크기는 5MB 이하여야 합니다",
+    docSizeError: "PDF 파일은 4MB 이하여야 합니다 (사진은 자동으로 줄여 드립니다)",
     docTypeBUSINESS_REGISTRATION: "사업자등록증",
     docTypeID_CARD: "신분증",
     docTypeVISA_DOCUMENT: "비자 서류",

@@ -29,12 +29,18 @@ export const env = {
 };
 
 export const isProduction = env.appEnv === "production";
+/** Staging and production are both real, shared deployments. */
+export const isDeployed = env.appEnv !== "development";
 
 const PLACEHOLDER_SECRET = "replace-with-a-long-random-string";
 
 export interface EnvValidation {
   errors: string[];
   warnings: string[];
+}
+
+function missing(keys: string[]): string[] {
+  return keys.filter((k) => !process.env[k]);
 }
 
 export function checkEnv(): EnvValidation {
@@ -44,52 +50,65 @@ export function checkEnv(): EnvValidation {
   if (!env.databaseUrl) errors.push("DATABASE_URL is required.");
   if (!env.authSecret) errors.push("AUTH_SECRET (or NEXTAUTH_SECRET) is required.");
 
-  if (isProduction) {
-    // Fatal in production:
+  // A Vercel deploy that forgot APP_ENV would silently run with dev defaults.
+  if (process.env.VERCEL && !isDeployed) {
+    errors.push("Running on Vercel with APP_ENV=development — set APP_ENV=staging or production.");
+  }
+
+  if (isDeployed) {
+    // Fatal on staging and production (serverless, shared, real phones):
     if (env.uploadStorage !== "s3") {
       errors.push(
-        "UPLOAD_STORAGE must be 's3' in production — local document storage is not allowed."
+        `UPLOAD_STORAGE must be 's3' on ${env.appEnv} — serverless disks are read-only/ephemeral.`
       );
+    }
+    if (env.uploadStorage === "s3") {
+      const m = missing(["AWS_REGION", "AWS_S3_BUCKET", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]);
+      if (m.length) errors.push(`UPLOAD_STORAGE=s3 but missing: ${m.join(", ")}.`);
     }
     if (env.authSecret === PLACEHOLDER_SECRET) {
       errors.push("AUTH_SECRET is still the placeholder value.");
     }
-    if (env.appUrl.startsWith("http://localhost")) {
-      errors.push("APP_URL must be a real https URL in production.");
+    if (!env.appUrl.startsWith("https://")) {
+      errors.push(`APP_URL must be a real https URL on ${env.appEnv}.`);
     }
-    if (env.uploadStorage === "s3" && !process.env.AWS_S3_BUCKET) {
-      errors.push("AWS_S3_BUCKET is required when UPLOAD_STORAGE=s3.");
+    if (!process.env.CRON_SECRET) {
+      errors.push("CRON_SECRET is required — job expiry and document cleanup crons return 503 without it.");
+    }
+    if (process.env.RATE_LIMIT_PROVIDER !== "redis") {
+      errors.push("RATE_LIMIT_PROVIDER must be 'redis' — in-memory limits reset on every serverless instance.");
+    } else {
+      const m = missing(["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"]);
+      if (m.length) errors.push(`RATE_LIMIT_PROVIDER=redis but missing: ${m.join(", ")}.`);
     }
     // SMS: if selected as the active provider, its credentials must be complete.
     if (env.notificationProvider === "sms") {
-      const missing = ["SMS_PROVIDER_KEY", "SMS_PROVIDER_SECRET", "SMS_SENDER_PHONE"].filter(
-        (k) => !process.env[k]
-      );
-      if (missing.length) {
-        errors.push(
-          `NOTIFICATION_PROVIDER=sms but missing: ${missing.join(", ")}.`
-        );
-      }
+      const m = missing(["SMS_PROVIDER_KEY", "SMS_PROVIDER_SECRET", "SMS_SENDER_PHONE"]);
+      if (m.length) errors.push(`NOTIFICATION_PROVIDER=sms but missing: ${m.join(", ")}.`);
+    }
+    if (env.enableErrorMonitoring && !env.sentryDsn) {
+      errors.push("ENABLE_ERROR_MONITORING=true but SENTRY_DSN is missing.");
     }
     if (!env.enableErrorMonitoring) {
-      warnings.push("ENABLE_ERROR_MONITORING is off in production.");
+      warnings.push(`ENABLE_ERROR_MONITORING is off on ${env.appEnv}.`);
     }
-  } else {
-    if (env.uploadStorage === "local") {
-      warnings.push("Using LOCAL document storage (development/staging only).");
+    if (isProduction && env.notificationProvider === "mock") {
+      warnings.push("NOTIFICATION_PROVIDER=mock in production — no SMS will be sent.");
     }
+  } else if (env.uploadStorage === "local") {
+    warnings.push("Using LOCAL document storage (development only).");
   }
 
   return { errors, warnings };
 }
 
-/** Validate at startup. Throws in production if there are fatal errors. */
+/** Validate at startup. Throws on staging/production if there are fatal errors. */
 export function validateEnv(): void {
   const { errors, warnings } = checkEnv();
   for (const w of warnings) console.warn(`[env] ⚠ ${w}`);
   if (errors.length) {
     const msg = `[env] Invalid configuration:\n - ${errors.join("\n - ")}`;
-    if (isProduction) throw new Error(msg);
+    if (isDeployed) throw new Error(msg);
     console.error(msg);
   }
 }
