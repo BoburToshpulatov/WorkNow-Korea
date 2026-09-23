@@ -29,6 +29,10 @@ export async function PUT(req: NextRequest) {
     preferredProvince: d.preferredProvince || null,
     preferredDistrict: d.preferredDistrict || null,
     preferredRadius: d.preferredRadius,
+    currentLatitude: d.currentLatitude ?? null,
+    currentLongitude: d.currentLongitude ?? null,
+    // availabilityStatus is owned by the one-click dashboard selector
+    // (/api/worker/availability), so the profile form never overwrites it.
     languages: d.languages,
     categories: d.categories,
     availability: d.availability,
@@ -55,6 +59,7 @@ export async function PUT(req: NextRequest) {
     create: {
       userId: session.user.id,
       ...data,
+      availabilityStatus: d.availabilityStatus,
       verificationStatus: visaCategory ? "PENDING" : "UNVERIFIED",
     },
     update: { ...data, ...resubmit },

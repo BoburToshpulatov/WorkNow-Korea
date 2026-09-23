@@ -13,6 +13,7 @@ const VARIANT: Record<
   FILLED: "muted",
   CANCELLED: "muted",
   REJECTED: "urgent",
+  EXPIRED: "muted",
 };
 
 export function JobStatus({ status }: { status: JobStatusEnum }) {

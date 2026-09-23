@@ -3,12 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getT } from "@/lib/getT";
 
 /**
- * Founder "every morning" dashboard. Operator-only KPI view (English labels —
- * this is an internal tool). Pulls live counts; no external analytics.
+ * Founder "every morning" dashboard. Operator KPI view; pulls live counts,
+ * no external analytics.
  */
 export default async function FounderDashboard() {
+  const { t } = await getT();
   const since30 = new Date(Date.now() - 30 * 86400000);
   const since7 = new Date(Date.now() - 7 * 86400000);
 
@@ -71,73 +73,73 @@ export default async function FounderDashboard() {
 
   return (
     <div>
-      <PageHeader title="Founder dashboard" description="Daily pilot health at a glance." />
+      <PageHeader title={t("admin.fdTitle")} description={t("admin.fdDesc")} />
 
       {/* KPI summary */}
       <Card className="mb-6 border-primary/40 bg-orange-50/40">
         <CardHeader>
-          <CardTitle className="text-lg">KPI summary</CardTitle>
+          <CardTitle className="text-lg">{t("admin.fdKpi")}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-          <div><p className="text-2xl font-bold">{workers}</p><p className="text-muted-foreground">Workers</p></div>
-          <div><p className="text-2xl font-bold">{employers}</p><p className="text-muted-foreground">Employers</p></div>
-          <div><p className="text-2xl font-bold">{jobsOpen}</p><p className="text-muted-foreground">Open jobs</p></div>
-          <div><p className="text-2xl font-bold">{hires}</p><p className="text-muted-foreground">Hires</p></div>
-          <div><p className="text-2xl font-bold text-primary">{interestRate}</p><p className="text-muted-foreground">Job→Interest</p></div>
-          <div><p className="text-2xl font-bold text-primary">{hireRate}</p><p className="text-muted-foreground">Interest→Hire</p></div>
-          <div><p className="text-2xl font-bold text-primary">{completeRate}</p><p className="text-muted-foreground">Hire→Complete</p></div>
+          <div><p className="text-2xl font-bold">{workers}</p><p className="text-muted-foreground">{t("admin.workers")}</p></div>
+          <div><p className="text-2xl font-bold">{employers}</p><p className="text-muted-foreground">{t("admin.employers")}</p></div>
+          <div><p className="text-2xl font-bold">{jobsOpen}</p><p className="text-muted-foreground">{t("admin.fdOpenJobs")}</p></div>
+          <div><p className="text-2xl font-bold">{hires}</p><p className="text-muted-foreground">{t("admin.fdHires")}</p></div>
+          <div><p className="text-2xl font-bold text-primary">{interestRate}</p><p className="text-muted-foreground">{t("admin.fdJobToInterest")}</p></div>
+          <div><p className="text-2xl font-bold text-primary">{hireRate}</p><p className="text-muted-foreground">{t("admin.fdInterestToHire")}</p></div>
+          <div><p className="text-2xl font-bold text-primary">{completeRate}</p><p className="text-muted-foreground">{t("admin.fdHireToComplete")}</p></div>
           <div>
             <p className={`text-2xl font-bold ${openReports + notifFailed > 0 ? "text-urgent" : "text-success"}`}>
               {openReports + notifFailed + pendingDocs}
             </p>
-            <p className="text-muted-foreground">Needs attention</p>
+            <p className="text-muted-foreground">{t("admin.fdNeedsAttention")}</p>
           </div>
         </CardContent>
       </Card>
 
-      <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Workers</h2>
+      <h2 className="mb-2 text-sm font-semibold text-muted-foreground">{t("admin.workers")}</h2>
       <div className="mb-6 grid gap-4 sm:grid-cols-4">
-        <StatsCard label="Total" value={workers} />
-        <StatsCard label="Verified" value={verifiedWorkers} accent="text-success" />
-        <StatsCard label="Active (7d)" value={activeWorkers.length} accent="text-primary" />
-        <StatsCard label="Receiving alerts" value={workersWithAlerts} />
+        <StatsCard label={t("admin.fdTotal")} value={workers} />
+        <StatsCard label={t("admin.fdVerified")} value={verifiedWorkers} accent="text-success" />
+        <StatsCard label={t("admin.fdActive7")} value={activeWorkers.length} accent="text-primary" />
+        <StatsCard label={t("admin.fdReceivingAlerts")} value={workersWithAlerts} />
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Employers</h2>
+      <h2 className="mb-2 text-sm font-semibold text-muted-foreground">{t("admin.employers")}</h2>
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <StatsCard label="Total" value={employers} />
-        <StatsCard label="Verified" value={verifiedEmployers} accent="text-success" />
-        <StatsCard label="Active (30d)" value={activeEmployers.length} accent="text-primary" />
+        <StatsCard label={t("admin.fdTotal")} value={employers} />
+        <StatsCard label={t("admin.fdVerified")} value={verifiedEmployers} accent="text-success" />
+        <StatsCard label={t("admin.fdActive30")} value={activeEmployers.length} accent="text-primary" />
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Jobs & marketplace</h2>
+      <h2 className="mb-2 text-sm font-semibold text-muted-foreground">{t("admin.fdSecJobs")}</h2>
       <div className="mb-6 grid gap-4 sm:grid-cols-4">
-        <StatsCard label="Created" value={jobsCreated} />
-        <StatsCard label="Open" value={jobsOpen} />
-        <StatsCard label="Filled" value={jobsFilled} />
-        <StatsCard label="Completed" value={completed} accent="text-success" />
-        <StatsCard label="Job views" value={jobViews} />
-        <StatsCard label="Interests" value={interests} />
+        <StatsCard label={t("admin.fdCreated")} value={jobsCreated} />
+        <StatsCard label={t("admin.fdOpen")} value={jobsOpen} />
+        <StatsCard label={t("admin.fdFilled")} value={jobsFilled} />
+        <StatsCard label={t("admin.fdCompleted")} value={completed} accent="text-success" />
+        <StatsCard label={t("admin.fdJobViews")} value={jobViews} />
+        <StatsCard label={t("admin.fdInterests")} value={interests} />
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Notifications & trust</h2>
+      <h2 className="mb-2 text-sm font-semibold text-muted-foreground">{t("admin.fdSecNotif")}</h2>
       <div className="grid gap-4 sm:grid-cols-4">
-        <StatsCard label="Notif sent" value={notifSent} />
-        <StatsCard label="Notif failed" value={notifFailed} accent="text-urgent" />
-        <StatsCard label="Open reports" value={openReports} accent="text-urgent" />
+        <StatsCard label={t("admin.fdNotifSent")} value={notifSent} />
+        <StatsCard label={t("admin.fdNotifFailed")} value={notifFailed} accent="text-urgent" />
+        <StatsCard label={t("admin.fdOpenReports")} value={openReports} accent="text-urgent" />
         <StatsCard
-          label="Pending verifications"
+          label={t("admin.fdPendingVerifs")}
           value={pendingVerifEmp + pendingVerifWorker + pendingDocs}
         />
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2 text-sm">
-        <Link href="/admin/verifications" className="text-primary underline">Verifications</Link>
-        <Link href="/admin/documents" className="text-primary underline">Documents</Link>
-        <Link href="/admin/reports" className="text-primary underline">Reports</Link>
-        <Link href="/admin/analytics" className="text-primary underline">Analytics</Link>
-        <Link href="/admin/ops" className="text-primary underline">Ops & exports</Link>
-        <Link href="/admin/users" className="text-primary underline">User search</Link>
+        <Link href="/admin/verifications" className="text-primary underline">{t("admin.fdLinkVerifications")}</Link>
+        <Link href="/admin/documents" className="text-primary underline">{t("admin.fdLinkDocuments")}</Link>
+        <Link href="/admin/reports" className="text-primary underline">{t("admin.fdLinkReports")}</Link>
+        <Link href="/admin/analytics" className="text-primary underline">{t("admin.fdLinkAnalytics")}</Link>
+        <Link href="/admin/ops" className="text-primary underline">{t("admin.fdLinkOps")}</Link>
+        <Link href="/admin/users" className="text-primary underline">{t("admin.fdLinkUserSearch")}</Link>
       </div>
     </div>
   );

@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
+import { useT } from "@/components/LocaleProvider";
 
 /** Founder tool: send a single test SMS and see the delivery status. */
 export function TestSmsCard() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useT();
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("Test message");
   const [loading, setLoading] = useState(false);
@@ -38,23 +40,21 @@ export function TestSmsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Test SMS</CardTitle>
+        <CardTitle className="text-lg">{t("admin.testSmsTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         <div className="space-y-1">
-          <Label htmlFor="t-phone">Phone</Label>
+          <Label htmlFor="t-phone">{t("admin.testSmsPhone")}</Label>
           <Input id="t-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="010-1234-5678" />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="t-msg">Message</Label>
+          <Label htmlFor="t-msg">{t("admin.testSmsMessage")}</Label>
           <Input id="t-msg" value={message} onChange={(e) => setMessage(e.target.value)} />
         </div>
         <Button size="sm" disabled={loading || !phone} onClick={send}>
-          {loading ? "Sending…" : "Send test SMS"}
+          {loading ? t("common.saving") : t("admin.testSmsSend")}
         </Button>
-        <p className="text-xs text-muted-foreground">
-          Sends to one number. Mock mode logs a MOCKED delivery; no secrets are stored.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("notifications.smsConsentText")}</p>
       </CardContent>
     </Card>
   );

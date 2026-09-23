@@ -51,24 +51,22 @@ npx prisma generate         # part of build
 - **Staging:** `npm run db:seed` for demo data is fine.
 - **Production:** do NOT seed demo users. Onboard real employers/workers per the runbook.
 
-## 8. Cron setup (document retention)
-**Vercel Cron** (`vercel.json`):
-```json
-{ "crons": [{ "path": "/api/cron/documents-cleanup", "schedule": "0 3 * * *" }] }
-```
+## 8. Cron setup
+Two secret-protected endpoints (`CRON_SECRET`):
+
+| Endpoint | Schedule | Purpose |
+| --- | --- | --- |
+| `/api/cron/jobs-expire` | hourly (GitHub Actions) + daily (Vercel) | Mark OPEN/PENDING jobs past their start-time grace window as `EXPIRED` (1 day for hourly/daily, 7 for multi-day, 30 for monthly — `src/lib/job-expiry.ts`). Feeds hide stale jobs at query time regardless. |
+| `/api/cron/documents-cleanup` | daily 03:00 KST (Vercel) | Document retention cleanup. |
+
+**Vercel Cron** — `vercel.json` runs both endpoints daily (Hobby-plan compatible).
 Vercel sends `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRET` is set.
 
-**GitHub Actions**:
-```yaml
-on: { schedule: [{ cron: "0 18 * * *" }] }   # 03:00 KST
-jobs:
-  cleanup:
-    runs-on: ubuntu-latest
-    steps:
-      - run: curl -fsS -X POST "$APP_URL/api/cron/documents-cleanup" -H "Authorization: Bearer $CRON_SECRET"
-        env: { APP_URL: ${{ secrets.APP_URL }}, CRON_SECRET: ${{ secrets.CRON_SECRET }} }
-```
-**Manual:** `npm run documents:cleanup`.
+**GitHub Actions** — `.github/workflows/cron.yml` calls `jobs-expire` hourly for
+each environment whose repo secrets are set (`STAGING_APP_URL` +
+`STAGING_CRON_SECRET`, `PRODUCTION_APP_URL` + `PRODUCTION_CRON_SECRET`).
+
+**Manual:** `npm run jobs:expire`, `npm run documents:cleanup`.
 
 ## 9. Monitoring setup
 - Set `ENABLE_ERROR_MONITORING=true` + `SENTRY_DSN`. Errors are captured server-side

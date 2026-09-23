@@ -15,7 +15,7 @@ export default async function AdminUserTimelinePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { locale } = await getT();
+  const { t, locale } = await getT();
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -29,7 +29,10 @@ export default async function AdminUserTimelinePage({
   // Build a simple chronological timeline from the user's activity.
   type Ev = { at: Date; label: string };
   const events: Ev[] = [];
-  events.push({ at: user.createdAt, label: `Joined as ${user.role}` });
+  events.push({
+    at: user.createdAt,
+    label: t("admin.tlJoined", { role: t(`enums.role.${user.role}`) }),
+  });
 
   if (user.employerProfile) {
     const jobs = await prisma.job.findMany({
@@ -38,7 +41,13 @@ export default async function AdminUserTimelinePage({
       take: 50,
     });
     jobs.forEach((j) =>
-      events.push({ at: j.createdAt, label: `Posted job "${j.title}" (${j.status})` })
+      events.push({
+        at: j.createdAt,
+        label: t("admin.tlPosted", {
+          title: j.title,
+          status: t(`enums.jobStatus.${j.status}`),
+        }),
+      })
     );
   }
 
@@ -57,13 +66,32 @@ export default async function AdminUserTimelinePage({
   ]);
 
   interests.forEach((i) =>
-    events.push({ at: i.createdAt, label: `Interest on "${i.job.title}" → ${i.status}` })
+    events.push({
+      at: i.createdAt,
+      label: t("admin.tlInterest", {
+        title: i.job.title,
+        status: t(`applicantStatus.${i.status}`),
+      }),
+    })
   );
-  notifs.forEach((n) => events.push({ at: n.createdAt, label: `Notified: ${n.title}` }));
+  notifs.forEach((n) =>
+    events.push({ at: n.createdAt, label: t("admin.tlNotified", { title: n.title }) })
+  );
   docs.forEach((d) =>
-    events.push({ at: d.uploadedAt, label: `Uploaded ${d.documentType} (${d.status})` })
+    events.push({
+      at: d.uploadedAt,
+      label: t("admin.tlUploaded", {
+        type: t(`ts.docType${d.documentType}`),
+        status: t(`ts.docStatus${d.status}`),
+      }),
+    })
   );
-  reports.forEach((r) => events.push({ at: r.createdAt, label: `Filed report: ${r.reasonCode}` }));
+  reports.forEach((r) =>
+    events.push({
+      at: r.createdAt,
+      label: t("admin.tlReport", { reason: t(`reportReason.${r.reasonCode}`) }),
+    })
+  );
   events.sort((a, b) => b.at.getTime() - a.at.getTime());
 
   return (
@@ -73,14 +101,14 @@ export default async function AdminUserTimelinePage({
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-lg">Profile</CardTitle>
+            <CardTitle className="text-lg">{t("admin.userProfile")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p>Phone: <span className="font-medium">{user.phone}</span></p>
-            <p>Role: {user.role}</p>
+            <p>{t("admin.userPhone")}: <span className="font-medium">{user.phone}</span></p>
+            <p>{t("admin.userRole")}: {t(`enums.role.${user.role}`)}</p>
             {profile && (
               <p className="flex items-center gap-2">
-                Verification:
+                {t("admin.userVerification")}:
                 {user.workerProfile && (
                   <VerifyControl target="WORKER" profileId={user.workerProfile.id} current={user.workerProfile.verificationStatus} />
                 )}
@@ -90,22 +118,22 @@ export default async function AdminUserTimelinePage({
               </p>
             )}
             {user.employerProfile?.flaggedForReview && (
-              <Badge variant="urgent">Flagged for review</Badge>
+              <Badge variant="urgent">{t("admin.userFlagged")}</Badge>
             )}
             <p>
-              Rating received:{" "}
+              {t("admin.userRatingReceived")}:{" "}
               {reviewsGot._avg.rating != null
                 ? `★ ${reviewsGot._avg.rating.toFixed(1)} (${reviewsGot._count})`
                 : "—"}
             </p>
-            <p>Reviews given: {reviewsGiven}</p>
-            <p>Joined: {formatDateTime(user.createdAt, locale)}</p>
+            <p>{t("admin.userReviewsGiven")}: {reviewsGiven}</p>
+            <p>{t("admin.userJoined")}: {formatDateTime(user.createdAt, locale)}</p>
           </CardContent>
         </Card>
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-lg">Timeline</CardTitle>
+            <CardTitle className="text-lg">{t("admin.userTimeline")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ol className="space-y-2 text-sm">
@@ -123,7 +151,7 @@ export default async function AdminUserTimelinePage({
       </div>
 
       <div className="mt-4">
-        <Link href="/admin/users" className="text-sm text-primary underline">← Back to users</Link>
+        <Link href="/admin/users" className="text-sm text-primary underline">← {t("admin.backToUsers")}</Link>
       </div>
     </div>
   );

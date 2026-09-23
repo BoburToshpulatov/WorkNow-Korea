@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runDocumentCleanup } from "@/lib/document-cleanup";
 import { captureError } from "@/lib/error-monitoring";
+import { rejectUnauthorizedCron } from "@/lib/cron-auth";
 
 /**
  * Scheduled document cleanup endpoint (Phase 5).
- * Protected by CRON_SECRET via `Authorization: Bearer <secret>` (Vercel Cron
- * sends this automatically) or `?secret=`. Returns 401 without a valid secret.
+ * Protected by CRON_SECRET (see rejectUnauthorizedCron). Returns 401 without
+ * a valid secret.
  */
 export async function POST(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    return NextResponse.json({ error: "CRON_NOT_CONFIGURED" }, { status: 503 });
-  }
-  const auth = req.headers.get("authorization");
-  const provided =
-    auth?.replace(/^Bearer\s+/i, "") ?? req.nextUrl.searchParams.get("secret");
-  if (provided !== secret) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const rejected = rejectUnauthorizedCron(req);
+  if (rejected) return rejected;
 
   try {
     const result = await runDocumentCleanup();

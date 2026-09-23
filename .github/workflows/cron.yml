@@ -1,0 +1,28 @@
+name: Scheduled jobs
+
+# Hourly job expiry for any Vercel plan (Hobby only allows daily crons, which
+# vercel.json keeps as a backstop). Each target runs only if its secrets are
+# set: STAGING_APP_URL + STAGING_CRON_SECRET, PRODUCTION_APP_URL + PRODUCTION_CRON_SECRET.
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  expire-jobs:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [STAGING, PRODUCTION]
+    env:
+      APP_URL: ${{ secrets[format('{0}_APP_URL', matrix.target)] }}
+      CRON_SECRET: ${{ secrets[format('{0}_CRON_SECRET', matrix.target)] }}
+    steps:
+      - name: Expire stale jobs
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "${{ matrix.target }} not configured — skipping."
+            exit 0
+          fi
+          curl -fsS -X POST "$APP_URL/api/cron/jobs-expire" -H "Authorization: Bearer $CRON_SECRET"

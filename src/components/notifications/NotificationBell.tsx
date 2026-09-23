@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useUnreadCount } from "@/components/notifications/useUnreadCount";
+import { useT } from "@/components/LocaleProvider";
 
 /**
  * Header bell with an unread badge. Links to the role's notification surface:
@@ -12,6 +13,7 @@ import { useUnreadCount } from "@/components/notifications/useUnreadCount";
 export function NotificationBell() {
   const { data: session } = useSession();
   const unread = useUnreadCount();
+  const { t } = useT();
   if (!session?.user) return null;
 
   const role = session.user.role;
@@ -26,7 +28,7 @@ export function NotificationBell() {
     <Link
       href={href}
       className="relative inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
-      aria-label="Notifications"
+      aria-label={t("common.notifications")}
     >
       <Bell className="h-5 w-5 text-gray-600" />
       {unread > 0 && (

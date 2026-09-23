@@ -27,6 +27,7 @@ import { getT } from "@/lib/getT";
 import { formatJobSalary, formatDateTime, formatJobLocation } from "@/lib/i18n";
 import { Analytics } from "@/lib/analytics";
 import { getEmployerStats, employerTier } from "@/lib/trust";
+import { isJobExpired } from "@/lib/job-expiry";
 
 export default async function JobDetailPage({
   params,
@@ -43,8 +44,14 @@ export default async function JobDetailPage({
     include: { employer: true },
   });
   // Workers may only view live jobs. PENDING (awaiting admin approval),
-  // REJECTED, and CANCELLED jobs must not expose contact details.
-  if (!job || (job.status !== "OPEN" && job.status !== "FILLED")) notFound();
+  // REJECTED, CANCELLED, and EXPIRED jobs must not expose contact details.
+  if (
+    !job ||
+    (job.status !== "OPEN" && job.status !== "FILLED") ||
+    isJobExpired(job)
+  ) {
+    notFound();
+  }
 
   const [interest, saved] = await Promise.all([
     prisma.jobInterest.findUnique({
@@ -78,7 +85,14 @@ export default async function JobDetailPage({
           </div>
           <h1 className="mt-2 text-2xl font-bold">{job.title}</h1>
         </div>
-        {job.isUrgent && <UrgentBadge />}
+        <div className="flex flex-col items-end gap-1">
+          {job.isUrgent && <UrgentBadge />}
+          {job.urgencyType && (
+            <Badge variant="outline" className="text-urgent">
+              {t("match.urgencyLabel")}: {t(`enums.urgencyType.${job.urgencyType}`)}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Big salary */}
@@ -98,6 +112,7 @@ export default async function JobDetailPage({
         <Fact icon={MapPin} label={t("common.location")}>
           {job.address}
           {locationText ? ` · ${locationText}` : ""}
+          {job.locationNote ? ` · ${job.locationNote}` : ""}
         </Fact>
         <Fact icon={Calendar} label={t("common.startTime")}>
           {formatDateTime(job.startDateTime, locale)}
@@ -155,6 +170,35 @@ export default async function JobDetailPage({
         </section>
       )}
 
+      {(job.nearPublicTransport ||
+        job.parkingAvailable ||
+        job.shuttleProvided ||
+        job.pickupAvailable ||
+        job.transportNote) && (
+        <section className="mt-6">
+          <h2 className="font-semibold">{t("match.transportTitle")}</h2>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {job.nearPublicTransport && (
+              <Badge variant="outline">{t("match.nearTransit")}</Badge>
+            )}
+            {job.shuttleProvided && (
+              <Badge variant="outline">{t("match.shuttle")}</Badge>
+            )}
+            {job.parkingAvailable && (
+              <Badge variant="outline">{t("match.parking")}</Badge>
+            )}
+            {job.pickupAvailable && (
+              <Badge variant="outline">{t("match.pickup")}</Badge>
+            )}
+          </div>
+          {job.transportNote && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("match.transportNoteLabel")}: {job.transportNote}
+            </p>
+          )}
+        </section>
+      )}
+
       {job.safetyNotes && (
         <section className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
           <h2 className="flex items-center gap-2 font-semibold text-amber-900">
@@ -204,12 +248,20 @@ export default async function JobDetailPage({
         </div>
       )}
 
-      {/* Actions */}
-      <div className="sticky bottom-20 mt-6 space-y-3 md:bottom-6">
-        <InterestButton jobId={job.id} initiallyInterested={!!interest} />
+      {/* Secondary actions */}
+      <div className="mt-6 space-y-3">
         <ContactButtons phone={job.contactPhone} kakaoId={job.kakaoId} />
         <SaveJobButton jobId={job.id} initiallySaved={!!saved} />
         <ReportButton jobId={job.id} />
+      </div>
+
+      {/* Primary action — only this stays pinned above the bottom nav */}
+      <div className="sticky bottom-20 z-10 mt-4 md:bottom-6">
+        <InterestButton
+          jobId={job.id}
+          phone={job.contactPhone}
+          initiallyInterested={!!interest}
+        />
       </div>
     </div>
   );

@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection for the app (Neon "-pooler" host on staging/production).
+  url       = env("DATABASE_URL")
+  // Direct (unpooled) connection for migrations. Locally, same as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -19,6 +22,7 @@ enum JobStatus {
   FILLED
   CANCELLED
   REJECTED
+  EXPIRED
 }
 
 enum DurationType {
@@ -40,6 +44,26 @@ enum PaymentTiming {
   WEEKLY
   MONTHLY
   AFTER_COMPLETION
+  NEGOTIABLE
+}
+
+// Matching engine — single current availability of a worker (one-click status).
+// Distinct from the legacy `Availability[]` preference list on WorkerProfile.
+enum AvailabilityStatus {
+  AVAILABLE_NOW
+  AVAILABLE_TODAY
+  AVAILABLE_TONIGHT
+  AVAILABLE_TOMORROW
+  WEEKENDS_ONLY
+  UNAVAILABLE
+}
+
+// Matching engine — how time-sensitive an urgent job is.
+enum UrgencyType {
+  WITHIN_2_HOURS
+  TODAY
+  TONIGHT
+  FLEXIBLE
 }
 
 enum JobCategory {
@@ -124,6 +148,7 @@ enum NotificationType {
   NEW_INTEREST
   STATUS_CHANGE
   VERIFICATION_UPDATE
+  REHIRE_INVITE
   SYSTEM
 }
 
@@ -179,10 +204,13 @@ model WorkerProfile {
   preferredCity      String
   preferredProvince  String?
   preferredDistrict  String?
-  preferredRadius    Int                @default(10)
+  preferredRadius    Int                @default(10) // preferred max distance (km)
+  currentLatitude    Float?
+  currentLongitude   Float?
   languages          String[]
   categories         JobCategory[]
   availability       Availability[]
+  availabilityStatus AvailabilityStatus @default(AVAILABLE_TODAY) // current one-click status
   transport          TransportType      @default(PUBLIC_TRANSIT)
   experience         String?
   visaNote           String?
@@ -234,6 +262,7 @@ model Job {
   region             String
   latitude           Float?
   longitude          Float?
+  locationNote       String?
   startDateTime      DateTime
   durationType       DurationType
   durationDetails    String
@@ -247,8 +276,17 @@ model Job {
   contactPhone       String
   kakaoId            String?
   isUrgent           Boolean         @default(false)
+  urgencyType        UrgencyType?
+  nearPublicTransport Boolean        @default(false)
+  parkingAvailable   Boolean         @default(false)
+  shuttleProvided    Boolean         @default(false)
+  pickupAvailable    Boolean         @default(false)
+  transportNote      String?
   safetyNotes        String?
   status             JobStatus       @default(PENDING)
+  // First time the job went OPEN (instantly for verified employers, else on
+  // admin approval). Start of the clock for liquidity metrics.
+  publishedAt        DateTime?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 

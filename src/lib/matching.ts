@@ -1,5 +1,34 @@
-import type { Prisma } from "@prisma/client";
+import type { AvailabilityStatus, Prisma } from "@prisma/client";
 import type { CategoryValue } from "./constants";
+import { notExpiredWhere } from "./job-expiry";
+import { kstHour } from "./time";
+
+// ── Availability matching (Phase 2) ─────────────────────────────────
+/** Statuses that count as "ready right away" — targeted by urgent jobs. */
+export const URGENT_READY_STATUSES: AvailabilityStatus[] = [
+  "AVAILABLE_NOW",
+  "AVAILABLE_TODAY",
+  "AVAILABLE_TONIGHT",
+];
+
+/**
+ * Whether a worker with `status` should be matched to a job.
+ * - UNAVAILABLE workers are never matched.
+ * - Urgent jobs only reach immediately-available workers.
+ * - Regular jobs reach everyone except UNAVAILABLE.
+ */
+export function isAvailableForJob(
+  status: AvailabilityStatus,
+  isUrgent: boolean
+): boolean {
+  if (status === "UNAVAILABLE") return false;
+  if (isUrgent) return URGENT_READY_STATUSES.includes(status);
+  return true;
+}
+
+// ── Feed sorting (Phase 1 & 4) ──────────────────────────────────────
+export type JobSort = "nearest" | "highestPay" | "newest" | "urgent";
+export const JOB_SORTS: JobSort[] = ["urgent", "nearest", "highestPay", "newest"];
 
 export interface MatchCriteria {
   city?: string; // province / 광역시 (job.city)
@@ -14,12 +43,16 @@ export interface MatchCriteria {
 /**
  * Build a Prisma `where` clause for searching OPEN jobs against criteria.
  * Matches by province (city), district, category, language, and urgency.
+ * Always excludes jobs past their start-time grace window (see job-expiry).
  * TODO: replace district matching with PostGIS radius once lat/lng is captured.
  */
 export function buildJobWhereClause(
   criteria: MatchCriteria
 ): Prisma.JobWhereInput {
-  const where: Prisma.JobWhereInput = { status: "OPEN" };
+  const where: Prisma.JobWhereInput = {
+    status: "OPEN",
+    AND: [notExpiredWhere()],
+  };
 
   if (criteria.city) {
     where.city = { equals: criteria.city, mode: "insensitive" };
@@ -51,6 +84,89 @@ export function buildJobWhereClause(
   }
 
   return where;
+}
+
+/**
+ * Rough monthly-equivalent salary so "highest pay" can compare across salary
+ * types (hourly vs daily vs monthly). Assumes ~8h/day, ~22 days/month.
+ */
+export function monthlyEquivalent(amount: number, salaryType: string): number {
+  switch (salaryType) {
+    case "HOURLY":
+      return amount * 8 * 22;
+    case "DAILY":
+      return amount * 22;
+    case "MONTHLY":
+      return amount;
+    default:
+      return amount; // FIXED — compare as-is
+  }
+}
+
+export interface SortableJob {
+  isUrgent: boolean;
+  createdAt: Date;
+  salaryAmount: number;
+  salaryType: string;
+  distanceKm?: number | null;
+}
+
+/**
+ * Sort jobs for the worker feed. `nearest` requires distanceKm; jobs without a
+ * distance sink to the bottom. Urgent jobs always tie-break to the top.
+ */
+export function sortJobs<T extends SortableJob>(jobs: T[], sort: JobSort): T[] {
+  const byUrgentThen = (cmp: (a: T, b: T) => number) => (a: T, b: T) =>
+    Number(b.isUrgent) - Number(a.isUrgent) || cmp(a, b);
+
+  const sorted = [...jobs];
+  switch (sort) {
+    case "nearest":
+      sorted.sort(
+        byUrgentThen(
+          (a, b) =>
+            (a.distanceKm ?? Number.POSITIVE_INFINITY) -
+            (b.distanceKm ?? Number.POSITIVE_INFINITY)
+        )
+      );
+      break;
+    case "highestPay":
+      sorted.sort(
+        byUrgentThen(
+          (a, b) =>
+            monthlyEquivalent(b.salaryAmount, b.salaryType) -
+            monthlyEquivalent(a.salaryAmount, a.salaryType)
+        )
+      );
+      break;
+    case "urgent":
+      sorted.sort(byUrgentThen((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      break;
+    case "newest":
+    default:
+      sorted.sort(byUrgentThen((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      break;
+  }
+  return sorted;
+}
+
+const NIGHT_KEYWORDS = /야간|심야|밤샘|night|tungi/i;
+
+/**
+ * Whether a job is night work: flagged "tonight", starting 20:00–04:59 KST
+ * (a shift that mostly falls in the legal 야간근로 window, 22:00–06:00), or
+ * described as night work in its title/duration (any supported language).
+ */
+export function isNightJob(job: {
+  urgencyType: string | null;
+  startDateTime: Date;
+  title: string;
+  durationDetails: string;
+}): boolean {
+  if (job.urgencyType === "TONIGHT") return true;
+  const hour = kstHour(job.startDateTime);
+  if (hour >= 20 || hour < 5) return true;
+  return NIGHT_KEYWORDS.test(`${job.title} ${job.durationDetails}`);
 }
 
 /**

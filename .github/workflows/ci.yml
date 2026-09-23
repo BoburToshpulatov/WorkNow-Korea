@@ -14,6 +14,7 @@ jobs:
       # Dummy, safe values so Prisma generate / Next build never need a real DB
       # or real secrets in CI. These are NOT real credentials.
       DATABASE_URL: "postgresql://ci:ci@localhost:5432/worknow_ci?schema=public"
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/worknow_ci?schema=public"
       NEXTAUTH_SECRET: "ci-dummy-secret-not-real-please-replace"
       AUTH_SECRET: "ci-dummy-secret-not-real-please-replace"
       NEXTAUTH_URL: "http://localhost:3000"
@@ -41,8 +42,17 @@ jobs:
       - name: Secrets check
         run: npm run secrets:check
 
+      - name: i18n check
+        run: npm run i18n:check
+
+      - name: i18n scan (hardcoded strings)
+        run: npm run i18n:scan -- --ci
+
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
 
       - name: Build
         run: npm run build

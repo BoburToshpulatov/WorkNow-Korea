@@ -1,26 +1,22 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
+import { getT } from "@/lib/getT";
 import { VerifyControl } from "@/components/admin/VerifyControl";
 import type { UserWithProfiles } from "@/types";
 
-const ROLE_LABELS: Record<string, string> = {
-  WORKER: "근로자",
-  EMPLOYER: "고용주",
-  ADMIN: "관리자",
-};
-
-export function UserTable({ users }: { users: UserWithProfiles[] }) {
+export async function UserTable({ users }: { users: UserWithProfiles[] }) {
+  const { t } = await getT();
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-left text-muted-foreground">
           <tr>
-            <th className="px-4 py-3 font-medium">이름</th>
-            <th className="px-4 py-3 font-medium">연락처</th>
-            <th className="px-4 py-3 font-medium">구분</th>
-            <th className="px-4 py-3 font-medium">인증</th>
-            <th className="px-4 py-3 font-medium">가입일</th>
+            <th className="px-4 py-3 font-medium">{t("admin.colName")}</th>
+            <th className="px-4 py-3 font-medium">{t("admin.colPhone")}</th>
+            <th className="px-4 py-3 font-medium">{t("admin.colRole")}</th>
+            <th className="px-4 py-3 font-medium">{t("admin.colVerify")}</th>
+            <th className="px-4 py-3 font-medium">{t("admin.colJoined")}</th>
           </tr>
         </thead>
         <tbody>
@@ -36,7 +32,7 @@ export function UserTable({ users }: { users: UserWithProfiles[] }) {
                 </td>
                 <td className="px-4 py-3">{u.phone}</td>
                 <td className="px-4 py-3">
-                  <Badge variant="muted">{ROLE_LABELS[u.role] ?? u.role}</Badge>
+                  <Badge variant="muted">{t(`enums.role.${u.role}`)}</Badge>
                 </td>
                 <td className="px-4 py-3">
                   {u.workerProfile ? (

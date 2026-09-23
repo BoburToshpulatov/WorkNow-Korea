@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { adminJobStatusSchema } from "@/lib/validations";
 import { notifyMatchingWorkers } from "@/lib/notifications";
+import { isJobExpired } from "@/lib/job-expiry";
 
 export async function GET() {
   const session = await auth();
@@ -32,15 +33,28 @@ export async function PATCH(req: NextRequest) {
   }
 
   const before = await prisma.job.findUnique({ where: { id } });
+  if (!before) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Opening a job whose start time has already passed would alert workers to
+  // work that no longer exists — the employer must repost with a new date.
+  if (parsed.data.status === "OPEN" && isJobExpired(before)) {
+    return NextResponse.json({ error: "JOB_EXPIRED" }, { status: 409 });
+  }
 
   const job = await prisma.job.update({
     where: { id },
-    data: { status: parsed.data.status },
+    data: {
+      status: parsed.data.status,
+      // Start the liquidity clock the first time the job goes live.
+      ...(parsed.data.status === "OPEN" && !before.publishedAt
+        ? { publishedAt: new Date() }
+        : {}),
+    },
   });
 
   // When an admin approves a job (transition into OPEN), fan out alerts to
   // matching workers — the platform's core "instant alert" promise.
-  if (job.status === "OPEN" && before?.status !== "OPEN") {
+  if (job.status === "OPEN" && before.status !== "OPEN") {
     void notifyMatchingWorkers(job.id).catch(() => undefined);
   }
 

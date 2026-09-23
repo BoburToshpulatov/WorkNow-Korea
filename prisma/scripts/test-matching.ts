@@ -8,6 +8,8 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { notifyMatchingWorkers } from "../../src/lib/notifications";
+import { buildJobWhereClause } from "../../src/lib/matching";
+import { expireStaleJobs } from "../../src/lib/job-expiry";
 
 const prisma = new PrismaClient();
 const TAG = "010-9999-";
@@ -38,6 +40,13 @@ async function makeWorker(opts: {
   languages: string[];
   urgentOnly: boolean;
   availability?: ("NOW" | "TODAY" | "TOMORROW" | "WEEKENDS" | "NIGHT")[];
+  availabilityStatus?:
+    | "AVAILABLE_NOW"
+    | "AVAILABLE_TODAY"
+    | "AVAILABLE_TONIGHT"
+    | "AVAILABLE_TOMORROW"
+    | "WEEKENDS_ONLY"
+    | "UNAVAILABLE";
   enabled?: boolean;
 }) {
   const user = await prisma.user.create({
@@ -54,6 +63,7 @@ async function makeWorker(opts: {
           languages: opts.languages,
           categories: ["FACTORY"],
           availability: opts.availability ?? [],
+          availabilityStatus: opts.availabilityStatus ?? "AVAILABLE_TODAY",
         },
       },
       notificationPrefs: {
@@ -126,6 +136,54 @@ async function main() {
   await notifyMatchingWorkers(normalJob.id);
   assert((await countNotifs(wUrgentOnly, normalJob.id)) === 0, "urgent-only worker does NOT receive non-urgent alert");
   assert((await countNotifs(wSame, normalJob.id)) === 1, "regular worker receives non-urgent alert");
+
+  console.log("\nScenario C — availability gating (matching engine):");
+  const wUnavailable = await makeWorker({ phone: TAG + "0005", district: "달서구", languages: ["ko"], urgentOnly: false, availabilityStatus: "UNAVAILABLE" });
+  const wTomorrow = await makeWorker({ phone: TAG + "0006", district: "달서구", languages: ["ko"], urgentOnly: false, availabilityStatus: "AVAILABLE_TOMORROW" });
+  const urgentJob2 = await prisma.job.create({
+    data: { ...baseJob, title: "Urgent #2", category: "FACTORY", isUrgent: true, status: "OPEN" },
+  });
+  const normalJob2 = await prisma.job.create({
+    data: { ...baseJob, title: "Normal #2", category: "FACTORY", isUrgent: false, status: "OPEN" },
+  });
+  await notifyMatchingWorkers(urgentJob2.id);
+  await notifyMatchingWorkers(normalJob2.id);
+  assert((await countNotifs(wUnavailable, urgentJob2.id)) === 0, "UNAVAILABLE worker never receives urgent alert");
+  assert((await countNotifs(wUnavailable, normalJob2.id)) === 0, "UNAVAILABLE worker never receives non-urgent alert");
+  assert((await countNotifs(wTomorrow, urgentJob2.id)) === 0, "AVAILABLE_TOMORROW worker does NOT receive urgent alert");
+  assert((await countNotifs(wTomorrow, normalJob2.id)) === 1, "AVAILABLE_TOMORROW worker receives non-urgent alert");
+
+  console.log("\nScenario D — job expiry (start time + grace by duration type):");
+  const H = 3_600_000;
+  const ago = (ms: number) => new Date(Date.now() - ms);
+  const staleDaily = await prisma.job.create({
+    data: { ...baseJob, title: "Stale daily", category: "FACTORY", status: "OPEN", startDateTime: ago(48 * H) },
+  });
+  const freshDaily = await prisma.job.create({
+    data: { ...baseJob, title: "Fresh daily", category: "FACTORY", status: "OPEN", startDateTime: ago(2 * H) },
+  });
+  const staleMulti = await prisma.job.create({
+    data: { ...baseJob, title: "Stale multi-day", category: "FACTORY", status: "OPEN", durationType: "MULTI_DAY", startDateTime: ago(8 * 24 * H) },
+  });
+  const freshMonthly = await prisma.job.create({
+    data: { ...baseJob, title: "Fresh monthly", category: "FACTORY", status: "OPEN", durationType: "MONTHLY", startDateTime: ago(10 * 24 * H) },
+  });
+  const ids = [staleDaily.id, freshDaily.id, staleMulti.id, freshMonthly.id];
+  const visible = await prisma.job.findMany({
+    where: { AND: [buildJobWhereClause({}), { id: { in: ids } }] },
+    select: { id: true },
+  });
+  const visibleIds = new Set(visible.map((j) => j.id));
+  assert(!visibleIds.has(staleDaily.id), "daily job started 2 days ago is hidden from feed");
+  assert(visibleIds.has(freshDaily.id), "daily job started 2 hours ago is still in feed");
+  assert(!visibleIds.has(staleMulti.id), "multi-day job started 8 days ago is hidden from feed");
+  assert(visibleIds.has(freshMonthly.id), "monthly job started 10 days ago is still in feed");
+  await expireStaleJobs();
+  const statuses = Object.fromEntries(
+    (await prisma.job.findMany({ where: { id: { in: ids } }, select: { id: true, status: true } })).map((j) => [j.id, j.status])
+  );
+  assert(statuses[staleDaily.id] === "EXPIRED" && statuses[staleMulti.id] === "EXPIRED", "cron marks stale jobs EXPIRED");
+  assert(statuses[freshDaily.id] === "OPEN" && statuses[freshMonthly.id] === "OPEN", "cron leaves fresh jobs OPEN");
 
   await cleanup();
 

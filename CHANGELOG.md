@@ -5,6 +5,192 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 Versioning: `MAJOR.MINOR.PATCH` with a pre-release suffix during pilot
 (e.g. `0.1.0-pilot`). Release tags use the `v` prefix: `v0.1.0-pilot`.
 
+## [Unreleased]
+
+Launch-readiness fixes found by walking the worker flow on mobile.
+
+### Fixed
+- **Stale jobs stayed open forever.** Jobs now expire once their start time
+  passes a grace window (1 day hourly/daily, 7 multi-day, 30 monthly). Feeds,
+  job detail, and "I'm interested" enforce it at query time; a new hourly
+  `/api/cron/jobs-expire` (and `npm run jobs:expire`) sets `EXPIRED` status.
+  Admins can no longer approve an already-expired job.
+- **"Night" filter returned nothing for Korean jobs** (it searched for the
+  English word "night"). Night = "tonight" urgency, a 20:00–04:59 KST start, or
+  야간/심야/night/tungi in the title/duration.
+- **Mobile feed showed 7 dropdowns before the first job.** Quick chips are one
+  scrollable row; sort + a "Filters (n)" toggle replace the rest on mobile.
+- Duplicate "전체 급여" label on the payment-timing filter.
+- Urgent badge was hardcoded English; `i18n:scan` now also catches multi-line
+  JSX text.
+- Homepage showed invented audience numbers (1,200+ jobs / 3,500+ workers);
+  replaced with verifiable facts (₩0 worker fees, 3 languages, 1 free post).
+
+- **Times were computed in the server's timezone (UTC on Vercel).** Quiet
+  hours, night-job detection, and every rendered/SMS start time were 9 hours
+  off in production; all now use KST (`src/lib/time.ts`).
+- Jobs could be posted with ₩0 or below-minimum-wage pay. Job forms now
+  enforce the 2026 minimum wage (₩10,320/h; daily 4h floor; monthly 209h).
+- Jobs could be posted with a start time already past the expiry window.
+
+### Changed
+- **Verified employers' jobs go live immediately** and alert workers at once;
+  unverified or flagged employers still go through admin approval.
+- **Quick post** prefills from the employer's last job, defaults the start to
+  the next full hour, and the success screen says whether the job is live.
+- **Worker job page:** one pinned action — "I'm interested — call now" records
+  interest and opens the dialer in one tap (so every call appears in the
+  employer's applicant list); "just show interest" is secondary. Copy/Kakao/
+  save/report moved out of the sticky bar.
+- **SMS alerts** include a short job link (`/j/<id>`, which routes through
+  login and back) and no longer contain emoji (not supported by Korean SMS).
+- **Employers get an SMS** for the first 3 interested workers per job, with a
+  link to the applicants page (skipped if they turned SMS off).
+- Login honors a safe same-origin `?next=` path.
+
+- **`/api/health` was prerendered at build time**, so it always reported the
+  build's env and "db ok" even with the database down. Now per request.
+- Uploads up to 5MB exceeded Vercel's 4.5MB body limit. Cap is 4MB and phone
+  photos (incl. HEIC where the browser can decode it) are downscaled to JPEG
+  in the browser first.
+- The seed wipes every table; it now refuses `APP_ENV=production` and needs
+  `ALLOW_STAGING_SEED=true` on staging.
+
+### Deployment
+- Startup validation is fatal on **staging** as well as production, and also
+  requires S3 credentials, https `APP_URL`, `CRON_SECRET`, and Upstash redis.
+  A Vercel deploy with `APP_ENV=development` refuses to boot.
+- `DIRECT_URL` for migrations (pooled `DATABASE_URL` + direct URL on
+  Supabase/Neon); `postinstall: prisma generate`; `build:deploy` runs
+  `prisma migrate deploy` before building; Node pinned to 22.x.
+- `vercel.json`: Seoul region (`icn1`), Hobby-compatible daily crons; hourly
+  job expiry via `.github/workflows/cron.yml`.
+- Staging shows a "test server" banner; non-production is `noindex` and
+  `robots.txt` disallows everything.
+- `npm run env:check -- <file>` validates a target env file;
+  `npm run smoke -- <url>` runs post-deploy checks; health reports `commit`.
+- STAGING_DEPLOYMENT_PLAN.md rewritten as a step-by-step account setup guide.
+
+### Go-live
+- **Matching speed (liquidity) analytics** in Admin → Analytics: urgent jobs
+  answered within 2h, median time to first applicant / first hire, fill rate,
+  share of interests via the call button, response rate by district, and a live
+  list of jobs still waiting for an applicant (ops to-do list).
+- `Job.publishedAt` records when a job first went live (backfilled from
+  `createdAt` for existing live jobs). "Contacted" status changes and the
+  interest source (call vs. interest-only) are now tracked.
+- Legally required operator details (상호, 대표자, 사업자등록번호,
+  직업정보제공사업 신고번호, 통신판매업 신고번호, address, support, privacy officer)
+  are configured via env and shown in the footer; production refuses to boot
+  without them.
+- `npm run admin:promote -- <phone>` to create the first production admin
+  (production is never seeded).
+- Document upload asks users to cover the back digits of resident/alien
+  registration numbers.
+- `LAUNCH_CHECKLIST.md`: legal/regulatory items for counsel, production setup,
+  domain, SMS go-live, and soft-launch go/no-go metrics.
+
+### Added
+- Feed pagination (20 per page, "Load more") and a result count.
+- ESLint config (`next/core-web-vitals` + `next/typescript`); `npm run lint`
+  now runs in CI.
+- `vercel.json` registering both cron endpoints.
+
+## [0.2.2-pilot] — 2026-06-24
+
+Full multilingual UI pass. No new features — the entire visible app now renders
+in Korean, English, and Uzbek.
+
+### Fixed
+- **Admin, public, and legal pages were English-only.** Founder/ops/users/
+  user-timeline admin screens, all public pages (how-it-works, pricing), and
+  all legal pages (terms, privacy, worker/employer agreements) are now fully
+  localized in all three languages.
+- **Uzbek "admin fallback" removed.** `i18n:check` now requires Uzbek to mirror
+  every Korean key (admin + legal included), not just user-facing ones.
+- Localized remaining accessibility labels (menu, notifications, language,
+  dialog close) and server-built admin timeline event labels.
+- `LegalNotice` now shows in every language (Korean: reference-pending-review;
+  English/Uzbek: translation-for-convenience).
+
+### Added
+- **`npm run i18n:scan`** — heuristic detector of hardcoded user-visible
+  strings (JSX text + visible attributes), with `// i18n-ignore` opt-out and a
+  `--ci` mode wired into CI.
+- New locale namespaces: `pub` (public pages) and an expanded `legal`
+  (terms/privacy/agreements); ~430 new translated keys across ko/en/uz
+  (catalogs now 792 keys each, fully mirrored).
+- I18N_QA.md expanded with public/worker/employer/admin checklists.
+
+### Notes
+- Legal page bodies remain `[Draft]` pending counsel review (translated but
+  marked). Brand wordmark stays "WorkNow Korea" in all languages by design.
+
+## [0.2.1-pilot] — 2026-06-22
+
+Multilingual correctness pass. No new features — Korean, English, and Uzbek
+now work reliably and consistently across the app.
+
+### Fixed
+- **Uzbek was unreachable** — the language switcher disabled the Uzbek option
+  ("beta"); it is now selectable.
+- **Wrong fallback** — untranslated keys fell back uz → ko (mixed Korean).
+  Fallback is now uz → en → ko (and en → ko), so admin screens read cleanly in
+  English instead of leaking Korean.
+- **Hardcoded strings moved to catalogs** — job-feed empty state, admin user
+  table headers/roles, and all server-generated notification titles/bodies
+  (interest, application status, verification, document review).
+- **Locale-aware formatting** — Uzbek salary (`Kuniga 120,000 von`), 24-hour
+  Uzbek/Korean time vs 12-hour English, and Uzbek relative time (date-fns `uz`).
+
+### Added
+- **Uzbek translations** for all user-facing flows (worker, employer, public,
+  shared) — 204 previously-missing keys, including the full employer and
+  job-form namespaces.
+- **`npm run i18n:check`** — fails if English is missing any key or Uzbek is
+  missing a user-facing key; allows admin-only Uzbek fallback. Wired into CI.
+- **`I18N_QA.md`** — language QA checklist and formatting reference.
+
+### Notes
+- Admin screens and legal documents intentionally fall back (admin → English;
+  legal → Korean reference text).
+
+## [0.2.0-pilot] — 2026-06-22
+
+Core marketplace matching engine. No new product surfaces — sharpens the loop:
+employer needs workers now → nearby, available workers are alerted → reliable
+workers get rehired.
+
+### Added
+- **Location awareness** — `calculateDistanceKm` (Haversine) + distance utils;
+  job feed shows localized distance ("2.3 km away"), sort by nearest / highest
+  pay / newest / urgent, and within-5/10/20/50 km filters (graceful when the
+  worker has no saved location). Worker profile captures current lat/lng.
+- **Worker availability** — `AvailabilityStatus` (NOW/TODAY/TONIGHT/TOMORROW/
+  WEEKENDS_ONLY/UNAVAILABLE); one-click selector on the worker dashboard;
+  shown on employer applicant cards. UNAVAILABLE workers are never alerted;
+  urgent jobs only reach immediately-available workers.
+- **Urgent matching** — `UrgencyType` (WITHIN_2_HOURS/TODAY/TONIGHT/FLEXIBLE);
+  urgent badge + urgency label on cards/detail; urgent jobs sort first and get
+  urgency-led, localized SMS + in-app templates.
+- **Payment visibility** — `PaymentTiming.NEGOTIABLE`; payment-timing filter
+  and highest-pay sort (normalized across hourly/daily/monthly).
+- **Transport info** — job fields nearPublicTransport / parkingAvailable /
+  shuttleProvided / pickupAvailable / transportNote; badges on cards and a
+  transport section on job detail; inputs in the job form.
+- **Employer rehire** — `NotificationType.REHIRE_INVITE`; rehire page lists
+  workers who completed jobs (with count, last worked, rating) and sends an
+  in-app + SMS invite to an open job. Workers can accept or ignore.
+- **Seed** — Daegu/Busan/Incheon coordinates, worker availability statuses and
+  SMS opt-ins, urgent + same-day + transport-rich jobs.
+- **Matching test** — added availability-gating assertions (UNAVAILABLE never
+  matched; AVAILABLE_TOMORROW excluded from urgent, included in regular).
+
+### Notes
+- Distance filtering/sorting is in-memory (TODO markers for Kakao/Naver
+  geocoding and PostGIS radius). Still out of scope: payments, maps UI, PASS,
+  business registry API, additional languages.
+
 ## [0.1.0-pilot] — 2026-06-19
 
 First pilot-ready release. Job **information** platform (not an employment

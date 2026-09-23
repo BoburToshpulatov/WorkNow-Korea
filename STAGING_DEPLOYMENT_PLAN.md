@@ -1,120 +1,198 @@
 # Staging Deployment Plan — WorkNow Korea
 
-This is the step-by-step plan to stand up a **staging** environment that mirrors
-production, for pre-pilot testing. See `DEPLOYMENT.md` for production details and
-`RELEASE_CHECKLIST.md` for the release procedure.
+Step-by-step setup of a **staging** environment that mirrors production, for
+pre-pilot testing on real phones. The repo side is ready; everything below is
+account setup you do once. Budget ~2 hours, plus a few days' wait for SMS
+sender-number approval (start step 7 first).
+
+See `DEPLOYMENT.md` for production details and `RELEASE_CHECKLIST.md` for the
+per-release procedure.
 
 ---
 
-## 1. Recommended hosting
+## 0. Stack and why
 
-| Concern         | Recommendation                                  |
-| --------------- | ----------------------------------------------- |
-| App (Next.js)   | **Vercel** (native Next.js 14 App Router)       |
-| Postgres        | **Neon** or **Supabase** (managed, branchable)  |
-| Object storage  | **Cloudflare R2** or **AWS S3** (private)       |
-| Rate limiting   | **Upstash Redis** (REST)                        |
-| Errors          | **Sentry**                                      |
-| SMS             | **Solapi / Coolsms** (Korean sender ID)         |
-| Cron            | **Vercel Cron** (or GitHub Actions schedule)    |
+| Concern        | Service                          | Region             | Why |
+| -------------- | -------------------------------- | ------------------ | --- |
+| App            | **Vercel** (separate staging project) | `icn1` Seoul (set in `vercel.json`) | Native Next.js 14 |
+| Postgres       | **Supabase**                     | Northeast Asia (Seoul) | Keeps personal data in Korea (PIPA) and next to the app |
+| Documents      | **AWS S3**, private bucket       | `ap-northeast-2` Seoul | ID / business documents stay in Korea |
+| Rate limiting  | **Upstash Redis**                | closest to Seoul   | Stores only rate-limit counters |
+| Errors         | **Sentry**                       | —                  | Scrubbed server errors |
+| SMS            | **Solapi**                       | —                  | Korean sender-number support |
+| Crons          | Vercel Cron (daily) + GitHub Actions (hourly) | — | Works on the Hobby plan |
 
-Staging should use **separate** databases, buckets, and keys from production.
+Alternatives work too (Neon for Postgres, Cloudflare R2 for storage — set
+`S3_ENDPOINT`), but they host data outside Korea; confirm with counsel first.
 
-## 2. Vercel setup
+Staging must use **separate** databases, buckets, and keys from production.
 
-1. Import the GitHub repo into Vercel.
-2. Create a **staging** project (or a Preview env) bound to the `staging` branch.
-3. Framework preset: Next.js. Build command `npm run build`, install `npm ci`.
-4. Node version: **22**.
-5. Add all environment variables (see §9).
+Keep a scratch note of the values marked **→ note** below — they become the
+environment variables in step 6.
 
-## 3. Managed Postgres
+---
 
-1. Create a `worknow_staging` database.
-2. Copy the connection string into `DATABASE_URL` (with `?sslmode=require`).
-3. Ensure the staging DB is isolated from production.
+## 1. GitHub
 
-## 4. S3 / R2 private bucket
+1. Merge `feature/pilot-ready-marketplace` into `main` (via PR), then create the
+   `staging` branch from `main`:
+   ```bash
+   git switch main && git pull && git switch -c staging && git push -u origin staging
+   ```
+2. Generate the shared secrets now (**→ note** both):
+   ```bash
+   openssl rand -base64 32   # AUTH_SECRET
+   openssl rand -hex 32      # CRON_SECRET
+   ```
 
-1. Create a **private** bucket `worknow-staging-docs`.
-2. Block all public access.
-3. Create a scoped access key (read/write to that bucket only).
-4. Set `UPLOAD_STORAGE=s3`, `AWS_*` / `S3_ENDPOINT` vars.
+## 2. Supabase (Postgres)
 
-## 5. Upstash setup
+1. New project → name `worknow-staging` → region **Northeast Asia (Seoul)** →
+   set a strong DB password (**→ note**).
+2. Project → **Connect** → **ORMs → Prisma**. Copy both strings (**→ note**):
+   - **Transaction pooler** (port `6543`, ends with `?pgbouncer=true`) → `DATABASE_URL`
+   - **Session pooler** (port `5432`) → `DIRECT_URL`
 
-1. Create a Redis database.
-2. Copy `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
-3. Set `RATE_LIMIT_PROVIDER=redis`.
+   Use the session pooler, not the "direct connection", for `DIRECT_URL`:
+   the direct host is IPv6-only and Vercel builds can't reach it.
 
-## 6. Sentry setup
+## 3. AWS S3 (verification documents)
 
-1. Create a project; copy the DSN.
-2. Set `ENABLE_ERROR_MONITORING=true`, `SENTRY_DSN=...`.
+1. S3 → Create bucket `worknow-staging-docs`, region **ap-northeast-2**.
+   Keep **Block all public access** ON. Default encryption (SSE-S3) ON.
+2. IAM → Users → create `worknow-staging-app` (no console access) with this
+   inline policy — least privilege, this bucket only:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [{
+       "Effect": "Allow",
+       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+       "Resource": "arn:aws:s3:::worknow-staging-docs/*"
+     }]
+   }
+   ```
+3. Create an access key for that user (use case: "Application running outside
+   AWS") → **→ note** access key ID + secret.
 
-## 7. SMS provider setup
+## 4. Upstash Redis (rate limiting)
 
-1. Register a Solapi/Coolsms account and an approved **sender phone number**.
-2. Set `NOTIFICATION_PROVIDER=sms`, `SMS_PROVIDER=solapi`,
-   `SMS_PROVIDER_KEY`, `SMS_PROVIDER_SECRET`, `SMS_SENDER_PHONE`.
-3. Leave keys blank in early staging → sends degrade to `MOCKED` safely.
-4. Verify via **Admin → Ops → Test SMS**.
+1. Create database → name `worknow-staging` → region closest to Seoul (Tokyo).
+2. **REST API** section → **→ note** `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
 
-## 8. Cron setup
+## 5. Sentry (errors)
 
-1. Schedule `GET /api/cron/documents-cleanup` daily.
-2. Protect it with `CRON_SECRET` (header/secret check).
-3. On Vercel Cron, add the path; on GitHub Actions, use a scheduled workflow
-   that curls the endpoint with the secret.
+1. Create project → platform **Node.js** → name `worknow-staging`.
+2. **→ note** the DSN.
 
-## 9. Environment variables checklist
+## 6. Vercel
 
-| Variable                     | Required | Notes                                   |
-| ---------------------------- | -------- | --------------------------------------- |
-| `DATABASE_URL`               | ✅       | staging DB, `sslmode=require`           |
-| `NEXTAUTH_SECRET`/`AUTH_SECRET` | ✅    | `openssl rand -base64 32`               |
-| `NEXTAUTH_URL` / `APP_URL`   | ✅       | https staging URL                       |
-| `APP_ENV`                    | ✅       | `staging`                               |
-| `NOTIFICATION_PROVIDER`      | ✅       | `mock` early, `sms` once keys ready     |
-| `SMS_PROVIDER`               | ⬜       | `solapi`                                |
-| `SMS_PROVIDER_KEY/SECRET`    | ⬜       | blank → MOCKED                          |
-| `SMS_SENDER_PHONE`           | ⬜       | approved sender                         |
-| `UPLOAD_STORAGE`             | ✅       | `s3`                                    |
-| `AWS_*` / `S3_ENDPOINT`      | ✅       | private bucket creds                    |
-| `RATE_LIMIT_PROVIDER`        | ✅       | `redis`                                 |
-| `UPSTASH_REDIS_REST_*`       | ✅       | from Upstash                            |
-| `ENABLE_ERROR_MONITORING`    | ⬜       | `true` for staging                      |
-| `SENTRY_DSN`                 | ⬜       | from Sentry                             |
-| `CRON_SECRET`                | ✅       | random, for cleanup endpoint            |
+1. **Add New → Project** → import the GitHub repo → name it **`worknow-staging`**.
+2. Before the first deploy, set:
+   - **Build Command**: `npm run build:deploy` (applies migrations, then builds)
+   - **Node.js Version**: 22.x (also pinned via `engines`)
+3. **Environment Variables** (Production environment of this project):
 
-## 10. Migration strategy
+   | Variable | Value |
+   | --- | --- |
+   | `APP_ENV` | `staging` |
+   | `APP_URL` | `https://worknow-staging.vercel.app` (or your custom domain) |
+   | `NEXTAUTH_URL` | same as `APP_URL` |
+   | `AUTH_SECRET` | from step 1 |
+   | `NEXTAUTH_SECRET` | same as `AUTH_SECRET` |
+   | `DATABASE_URL` | Supabase transaction pooler (step 2) |
+   | `DIRECT_URL` | Supabase session pooler (step 2) |
+   | `UPLOAD_STORAGE` | `s3` |
+   | `AWS_REGION` | `ap-northeast-2` |
+   | `AWS_S3_BUCKET` | `worknow-staging-docs` |
+   | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | step 3 |
+   | `AWS_S3_PRIVATE_PREFIX` | `verification/` |
+   | `RATE_LIMIT_PROVIDER` | `redis` |
+   | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | step 4 |
+   | `ENABLE_ERROR_MONITORING` | `true` |
+   | `SENTRY_DSN` | step 5 |
+   | `CRON_SECRET` | from step 1 |
+   | `NOTIFICATION_PROVIDER` | `mock` until step 7 is done, then `sms` |
+   | `SMS_PROVIDER` | `solapi` |
+   | `DOCUMENT_RETENTION_DAYS` / `REJECTED_DOCUMENT_RETENTION_DAYS` | `90` / `14` |
+   | `LOG_LEVEL` | `info` |
+
+4. **Settings → Git → Production Branch** = `staging`. (Vercel Cron only runs
+   on production deployments of a project, so this makes the daily crons run.)
+5. Deploy. The app **refuses to boot** if any required variable is missing or
+   unsafe — the error in the function logs lists exactly which.
+
+### Verify the config locally (optional but fast)
+```bash
+npx vercel link            # pick worknow-staging
+npx vercel env pull .env.staging --environment=production
+npm run env:check -- .env.staging
+```
+`.env.staging` is gitignored. Delete it when done.
+
+## 7. Solapi (SMS) — start this first, approval takes days
+
+1. Sign up at solapi.com as a business.
+2. **발신번호 등록** (sender number registration). Required by Korean law; a
+   business landline/mobile needs 통신서비스 이용증명원. Wait for approval.
+3. Create an API key → **→ note** key + secret.
+4. In Vercel add `SMS_PROVIDER_KEY`, `SMS_PROVIDER_SECRET`,
+   `SMS_SENDER_PHONE` (the approved number, digits only), then set
+   `NOTIFICATION_PROVIDER=sms` and redeploy.
+5. **Admin → Ops → Test SMS** to your own phone.
+
+Until then, sends are logged as `MOCKED` in **Admin → Notification monitoring**.
+
+## 8. Seed demo data (staging only)
+
+The seed **deletes all data**. It refuses to run on production, and on staging
+only with an explicit opt-in:
+```bash
+APP_ENV=staging ALLOW_STAGING_SEED=true \
+  DATABASE_URL="<session pooler URL>" DIRECT_URL="<session pooler URL>" \
+  npm run db:seed
+```
+Then log in as admin (`010-0000-0000`) and **change the demo passwords** if the
+staging URL will be shared outside the team.
+
+## 9. Hourly crons (GitHub Actions)
+
+Repo → **Settings → Secrets and variables → Actions** → add:
+- `STAGING_APP_URL` = the `APP_URL` above
+- `STAGING_CRON_SECRET` = the `CRON_SECRET` above
+
+`.github/workflows/cron.yml` then expires stale jobs hourly (run it once via
+**Actions → Scheduled jobs → Run workflow** to confirm).
+
+## 10. Smoke test
+
+```bash
+CRON_SECRET="<staging cron secret>" npm run smoke -- https://worknow-staging.vercel.app
+```
+Checks health (DB, S3, redis, commit), pages, the SMS short link, and that cron
+and verification documents are locked down. Then walk the manual checklist:
+
+- [ ] Amber "test server" banner shows; page source has `noindex`
+- [ ] Register + login (worker, employer, admin); KO / EN / UZ switch persists
+- [ ] Verified employer quick-posts → job is live immediately
+- [ ] Matching worker gets in-app alert (+ SMS once step 7 is done) with a working `/j/…` link
+- [ ] Worker taps "I'm interested — call now" → employer sees applicant + gets SMS
+- [ ] Unverified employer's job lands in Admin → Jobs as PENDING
+- [ ] Upload a phone photo (>4MB is fine — it's shrunk) → admin can open it
+- [ ] Trigger an error → it appears in Sentry
+
+---
+
+## Migration strategy
 
 - **Never** run `migrate dev` against staging/production.
-- Apply with: `npx prisma migrate deploy` (idempotent, non-interactive).
-- Run as a deploy step or one-off job before traffic is allowed.
+- `npm run build:deploy` runs `prisma migrate deploy` (idempotent) before each build.
+- Before a risky migration: Supabase → Database → Backups (or a manual
+  `pg_dump` via the session pooler).
 
-## 11. Seed strategy
-
-- Staging may seed demo data: `npm run db:seed`.
-- **Production is never seeded** with demo users.
-
-## 12. Smoke test checklist (post-deploy)
-
-- [ ] `GET /api/health` returns 200
-- [ ] Register + login (worker, employer, admin)
-- [ ] Switch language KO / EN / UZ; persists
-- [ ] Job feed loads; filters work
-- [ ] Employer posts job → admin approves → worker gets in-app notification
-- [ ] SMS log appears in Admin → Ops (MOCKED or SENT)
-- [ ] Admin → Ops → Test SMS works
-- [ ] Document upload + admin verification works
-- [ ] Rate limiting active (redis)
-- [ ] Errors flow to Sentry (trigger a test error)
-
-## 13. Rollback plan
+## Rollback plan
 
 - **App:** Vercel → Deployments → promote the previous green deployment.
-- **DB:** forward-only migrations. Before a risky migration, take a snapshot
-  (Neon branch / managed backup). To roll back, restore the snapshot.
-- **Config:** keep the previous env var set documented; revert changed vars.
-- Communicate via the pilot channel; log in `PILOT_INCIDENTS.md`.
+- **DB:** forward-only migrations; restore the pre-deploy backup if needed.
+- **Config:** revert the changed env vars and redeploy.
+- Log it in `PILOT_INCIDENTS.md` and tell the pilot channel.

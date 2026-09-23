@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/LocaleProvider";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string | null }) {
   const router = useRouter();
   const { t } = useT();
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function LoginForm() {
       setError(t("auth.invalidCredentials"));
       return;
     }
-    router.push("/dashboard");
+    router.push(next ?? "/dashboard");
     router.refresh();
   };
 

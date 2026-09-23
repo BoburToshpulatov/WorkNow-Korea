@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Clock, Users, Languages } from "lucide-react";
+import { MapPin, Clock, Users, Languages, Navigation, Train, ParkingCircle, Bus, Car } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/common/CategoryIcon";
@@ -10,9 +10,18 @@ import { VerificationBadge } from "@/components/common/VerificationBadge";
 import { useT } from "@/components/LocaleProvider";
 import { formatRelativeTime, cn } from "@/lib/utils";
 import { formatJobSalary, formatJobLocation } from "@/lib/i18n";
+import { formatDistance } from "@/lib/distance";
 import type { JobWithEmployer } from "@/types";
 
-export function JobCard({ job, href }: { job: JobWithEmployer; href?: string }) {
+export function JobCard({
+  job,
+  href,
+  distanceKm,
+}: {
+  job: JobWithEmployer;
+  href?: string;
+  distanceKm?: number | null;
+}) {
   const { t, locale } = useT();
   const link = href ?? `/worker/jobs/${job.id}`;
   const locationText = formatJobLocation(job, locale);
@@ -30,7 +39,14 @@ export function JobCard({ job, href }: { job: JobWithEmployer; href?: string }) 
             <CategoryIcon category={job.category} />
             <Badge variant="muted">{t(`enums.category.${job.category}`)}</Badge>
           </div>
-          {job.isUrgent && <UrgentBadge />}
+          <div className="flex flex-col items-end gap-1">
+            {job.isUrgent && <UrgentBadge />}
+            {job.urgencyType && (
+              <Badge variant="outline" className="text-[10px] text-urgent">
+                {t(`enums.urgencyType.${job.urgencyType}`)}
+              </Badge>
+            )}
+          </div>
         </div>
 
         <h3 className="line-clamp-2 text-base font-semibold">{job.title}</h3>
@@ -48,6 +64,12 @@ export function JobCard({ job, href }: { job: JobWithEmployer; href?: string }) 
             <MapPin className="h-3.5 w-3.5" />
             {locationText}
           </span>
+          {distanceKm != null && (
+            <span className="flex items-center gap-1 font-medium text-primary">
+              <Navigation className="h-3.5 w-3.5" />
+              {formatDistance(distanceKm, locale)}
+            </span>
+          )}
           <span className="flex items-center gap-1">
             <Users className="h-3.5 w-3.5" />
             {t("jobs.workersNeededShort", { count: job.workersNeeded })}
@@ -66,6 +88,34 @@ export function JobCard({ job, href }: { job: JobWithEmployer; href?: string }) 
                 {t(`languages.${l}`)}
               </Badge>
             ))}
+          </div>
+        )}
+
+        {(job.nearPublicTransport ||
+          job.shuttleProvided ||
+          job.parkingAvailable ||
+          job.pickupAvailable) && (
+          <div className="mt-2 flex flex-wrap items-center gap-1">
+            {job.nearPublicTransport && (
+              <Badge variant="outline" className="gap-1 text-[11px]">
+                <Train className="h-3 w-3" /> {t("match.badgeMetro")}
+              </Badge>
+            )}
+            {job.shuttleProvided && (
+              <Badge variant="outline" className="gap-1 text-[11px]">
+                <Bus className="h-3 w-3" /> {t("match.badgeShuttle")}
+              </Badge>
+            )}
+            {job.parkingAvailable && (
+              <Badge variant="outline" className="gap-1 text-[11px]">
+                <ParkingCircle className="h-3 w-3" /> {t("match.badgeParking")}
+              </Badge>
+            )}
+            {job.pickupAvailable && (
+              <Badge variant="outline" className="gap-1 text-[11px]">
+                <Car className="h-3 w-3" /> {t("match.badgePickup")}
+              </Badge>
+            )}
           </div>
         )}
 

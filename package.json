@@ -1,11 +1,13 @@
 {
   "name": "worknow-korea",
-  "version": "0.1.0-pilot",
+  "version": "0.2.2-pilot",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:deploy": "prisma migrate deploy && next build",
     "start": "next start",
+    "postinstall": "prisma generate",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
@@ -13,11 +15,17 @@
     "db:reset": "prisma migrate reset",
     "db:seed": "tsx prisma/seed.ts",
     "db:check-users": "tsx prisma/check-users.ts",
+    "admin:promote": "tsx prisma/scripts/promote-admin.ts",
     "test:matching": "tsx prisma/scripts/test-matching.ts",
     "documents:cleanup": "tsx prisma/scripts/cleanup-documents.ts",
+    "jobs:expire": "tsx prisma/scripts/expire-jobs.ts",
     "storage:check": "tsx prisma/scripts/storage-check.ts",
     "rate-limit:check": "tsx prisma/scripts/rate-limit-check.ts",
-    "secrets:check": "tsx prisma/scripts/secrets-check.ts"
+    "secrets:check": "tsx prisma/scripts/secrets-check.ts",
+    "env:check": "tsx prisma/scripts/env-check.ts",
+    "smoke": "tsx prisma/scripts/smoke.ts",
+    "i18n:check": "tsx prisma/scripts/i18n-check.ts",
+    "i18n:scan": "tsx prisma/scripts/i18n-scan.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -67,5 +75,8 @@
     "tailwindcss": "^3.4.1",
     "tsx": "^4.22.4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

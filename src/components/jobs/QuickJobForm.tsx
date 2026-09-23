@@ -2,13 +2,13 @@
 
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, History } from "lucide-react";
 import { quickJobSchema, type QuickJobInput } from "@/lib/validations";
 import {
   JOB_CATEGORIES,
+  MINIMUM_WAGE,
   PROVINCES,
   districtsForProvince,
 } from "@/lib/constants";
@@ -31,22 +31,57 @@ function toDateTimeLocal(d: Date) {
   return new Date(d.getTime() - tz).toISOString().slice(0, 16);
 }
 
+/** Start of the next full hour — a realistic default for "need people now". */
+function nextFullHour() {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return d;
+}
+
+const WAGE_VARS = {
+  year: MINIMUM_WAGE.year,
+  hourly: MINIMUM_WAGE.hourly.toLocaleString("ko-KR"),
+};
+
+export interface QuickJobDefaults {
+  category: QuickJobInput["category"];
+  city: string;
+  district: string | null;
+  salaryAmount: number;
+  salaryType: QuickJobInput["salaryType"];
+  workersNeeded: number;
+  contactPhone: string;
+}
+
 export function QuickJobForm({
   defaultPhone,
   defaultCity,
+  defaultDistrict = "",
+  lastJob,
+  autoPublish = false,
 }: {
   defaultPhone: string;
   defaultCity: string;
+  defaultDistrict?: string;
+  lastJob?: QuickJobDefaults | null;
+  autoPublish?: boolean;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
   const { t } = useT();
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<string | null>(null);
+  const [done, setDone] = useState<{ id: string; live: boolean } | null>(null);
 
-  const initialCity = PROVINCES.includes(defaultCity)
-    ? defaultCity
-    : "대구광역시";
+  const initialCity =
+    [lastJob?.city, defaultCity].find(
+      (c): c is string => !!c && PROVINCES.includes(c),
+    ) ?? "대구광역시";
+  const initialDistrict =
+    lastJob?.city === initialCity
+      ? (lastJob.district ?? "")
+      : initialCity === defaultCity
+        ? defaultDistrict
+        : "";
 
   const {
     register,
@@ -59,15 +94,16 @@ export function QuickJobForm({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(quickJobSchema) as any,
     defaultValues: {
-      category: "FACTORY",
+      category: lastJob?.category ?? "FACTORY",
       province: initialCity,
       city: initialCity,
-      district: "",
-      startDateTime: new Date(),
-      salaryAmount: 0,
-      salaryType: "DAILY",
-      workersNeeded: 1,
-      contactPhone: defaultPhone,
+      district: initialDistrict,
+      startDateTime: nextFullHour(),
+      // Empty (not 0) so the employer must enter pay; 0 fails validation.
+      salaryAmount: lastJob?.salaryAmount ?? ("" as unknown as number),
+      salaryType: lastJob?.salaryType ?? "DAILY",
+      workersNeeded: lastJob?.workersNeeded ?? 1,
+      contactPhone: lastJob?.contactPhone || defaultPhone,
       isUrgent: false,
     },
   });
@@ -82,12 +118,19 @@ export function QuickJobForm({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error ?? t("jobForm.saveFailed"));
+        throw new Error(
+          data?.error === "START_IN_PAST"
+            ? t("jobForm.startInPast")
+            : t("jobForm.saveFailed"),
+        );
       }
       const data = await res.json();
-      setDone(data?.job?.id ?? "ok");
+      setDone({ id: data.job.id, live: data.job.status === "OPEN" });
     } catch (e) {
-      toast(e instanceof Error ? e.message : t("common.somethingWrong"), "error");
+      toast(
+        e instanceof Error ? e.message : t("common.somethingWrong"),
+        "error",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -99,19 +142,26 @@ export function QuickJobForm({
       <div className="mx-auto max-w-md text-center">
         <CheckCircle2 className="mx-auto h-14 w-14 text-success" />
         <h2 className="mt-4 text-xl font-bold">
-          {t("employer.quickPostSuccessTitle")}
+          {done.live
+            ? t("employer.quickPostLiveTitle")
+            : t("employer.quickPostSuccessTitle")}
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          {t("employer.quickPostSuccessBody")}
+          {done.live
+            ? t("employer.quickPostLiveBody")
+            : t("employer.quickPostSuccessBody")}
         </p>
+        {!done.live && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("employer.quickPostReviewNote")}
+          </p>
+        )}
         <div className="mt-6 flex flex-col gap-2">
-          {done !== "ok" && (
-            <Button asChild size="lg">
-              <Link href={`/employer/jobs/${done}/edit`}>
-                {t("employer.quickPostAddDetails")}
-              </Link>
-            </Button>
-          )}
+          <Button asChild size="lg">
+            <Link href={`/employer/jobs/${done.id}/edit`}>
+              {t("employer.quickPostAddDetails")}
+            </Link>
+          </Button>
           <Button asChild size="lg" variant="outline">
             <Link href="/employer/jobs">{t("employer.quickPostViewJobs")}</Link>
           </Button>
@@ -121,7 +171,16 @@ export function QuickJobForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mx-auto max-w-md space-y-4">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="mx-auto max-w-md space-y-4"
+    >
+      {lastJob && (
+        <p className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+          <History className="h-4 w-4 shrink-0" />
+          {t("employer.quickPostPrefilled")}
+        </p>
+      )}
       <div className="space-y-1.5">
         <Label>{t("jobForm.category")}</Label>
         <Controller
@@ -194,7 +253,9 @@ export function QuickJobForm({
             )}
           />
           {errors.district && (
-            <p className="text-xs text-destructive">{errors.district.message}</p>
+            <p className="text-xs text-destructive">
+              {errors.district.message}
+            </p>
           )}
         </div>
       </div>
@@ -210,7 +271,9 @@ export function QuickJobForm({
               type="datetime-local"
               className="h-12"
               value={toDateTimeLocal(
-                field.value instanceof Date ? field.value : new Date(field.value)
+                field.value instanceof Date
+                  ? field.value
+                  : new Date(field.value),
               )}
               onChange={(e) => field.onChange(new Date(e.target.value))}
             />
@@ -228,6 +291,11 @@ export function QuickJobForm({
             className="h-12"
             {...register("salaryAmount")}
           />
+          {errors.salaryAmount?.message && (
+            <p className="text-xs text-destructive">
+              {t(errors.salaryAmount.message, WAGE_VARS)}
+            </p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label>{t("jobForm.salaryType")}</Label>
@@ -240,17 +308,23 @@ export function QuickJobForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["HOURLY", "DAILY", "MONTHLY", "FIXED"] as const).map((v) => (
-                    <SelectItem key={v} value={v}>
-                      {t(`enums.salaryType.${v}`)}
-                    </SelectItem>
-                  ))}
+                  {(["HOURLY", "DAILY", "MONTHLY", "FIXED"] as const).map(
+                    (v) => (
+                      <SelectItem key={v} value={v}>
+                        {t(`enums.salaryType.${v}`)}
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
             )}
           />
         </div>
       </div>
+
+      <p className="-mt-2 text-xs text-muted-foreground">
+        {t("jobForm.minimumWageHint", WAGE_VARS)}
+      </p>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
@@ -292,9 +366,19 @@ export function QuickJobForm({
         )}
       />
 
-      <Button type="submit" size="lg" className="h-14 w-full text-base" disabled={submitting}>
+      <Button
+        type="submit"
+        size="lg"
+        className="h-14 w-full text-base"
+        disabled={submitting}
+      >
         {submitting ? t("common.saving") : t("employer.quickPostCta")}
       </Button>
+      {!autoPublish && (
+        <p className="text-center text-xs text-muted-foreground">
+          {t("employer.quickPostReviewNote")}
+        </p>
+      )}
     </form>
   );
 }

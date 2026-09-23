@@ -53,7 +53,7 @@ export default async function AdminUsersPage({
         <input
           name="q"
           defaultValue={query}
-          placeholder="Search by phone or name…"
+          placeholder={t("admin.userSearchPlaceholder")}
           className="h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm"
         />
       </form>

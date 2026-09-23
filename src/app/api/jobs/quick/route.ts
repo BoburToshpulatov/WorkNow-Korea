@@ -5,6 +5,8 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { quickJobSchema } from "@/lib/validations";
 import { Analytics } from "@/lib/analytics";
 import { notifyMatchingWorkers } from "@/lib/notifications";
+import { initialJobStatus } from "@/lib/trust";
+import { isJobExpired } from "@/lib/job-expiry";
 import { CATEGORY_MAP, type CategoryValue } from "@/lib/constants";
 import type { DurationType } from "@prisma/client";
 
@@ -51,9 +53,13 @@ export async function POST(req: NextRequest) {
     );
   }
   const d = parsed.data;
+  if (isJobExpired({ startDateTime: d.startDateTime, durationType: DURATION_BY_SALARY[d.salaryType] ?? "DAILY" })) {
+    return NextResponse.json({ error: "START_IN_PAST" }, { status: 400 });
+  }
   const categoryLabel =
     CATEGORY_MAP[d.category as CategoryValue]?.labelKo ?? d.category;
 
+  const status = initialJobStatus(employer);
   const job = await prisma.job.create({
     data: {
       employerId: employer.id,
@@ -77,12 +83,14 @@ export async function POST(req: NextRequest) {
       languagePreference: [],
       contactPhone: d.contactPhone,
       isUrgent: d.isUrgent,
-      status: "PENDING", // same moderation flow as the full form
+      status: status, // same moderation rule as the full form
+      publishedAt: status === "OPEN" ? new Date() : null,
     },
   });
 
   void Analytics.jobCreated(job.id, session.user.id);
-  // Jobs start PENDING; fan-out happens on admin approval. If already OPEN, notify.
+  // Verified employers go live immediately → fan out now. Otherwise the job is
+  // PENDING and fan-out happens on admin approval (see admin/jobs PATCH).
   if (job.status === "OPEN") {
     void notifyMatchingWorkers(job.id).catch(() => undefined);
   }

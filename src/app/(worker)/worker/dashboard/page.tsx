@@ -9,6 +9,7 @@ import { StatsCard } from "@/components/admin/StatsCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JobGrid } from "@/components/jobs/JobGrid";
+import { AvailabilitySelector } from "@/components/worker/AvailabilitySelector";
 import { buildJobWhereClause } from "@/lib/matching";
 import type { CategoryValue } from "@/lib/constants";
 
@@ -65,6 +66,12 @@ export default async function WorkerDashboard() {
           </Button>
         }
       />
+
+      {profile && (
+        <div className="mb-6">
+          <AvailabilitySelector current={profile.availabilityStatus} />
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatsCard label={t("worker.profileComplete")} value={`${completeness}%`} />

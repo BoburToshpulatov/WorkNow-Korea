@@ -1,6 +1,10 @@
+"use client";
+
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/LocaleProvider";
 
 export function UrgentBadge({ className }: { className?: string }) {
+  const { t } = useT();
   return (
     <span
       className={cn(
@@ -9,7 +13,7 @@ export function UrgentBadge({ className }: { className?: string }) {
       )}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-white" />
-      Urgent
+      {t("jobs.filterUrgent")}
     </span>
   );
 }
