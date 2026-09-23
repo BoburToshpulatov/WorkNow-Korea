@@ -80,7 +80,7 @@ async function JobResults({
   // Distance filter (only meaningful with a location).
   const within = Number(searchParams.within);
   if (hasLocation && within > 0) {
-    jobs = jobs.filter((j) => j.distanceKm != null && j.distanceKm <= within);
+    jobs = jobs.filter((j) => j.distanceKm != null && j.distanceKm <= within); // i18n-ignore
   }
 
   // Sort. "nearest" falls back to "newest" when no location is set.

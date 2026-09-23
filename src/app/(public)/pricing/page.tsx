@@ -3,61 +3,59 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getT } from "@/lib/getT";
 
 export const metadata = { title: "Pricing — WorkNow Korea" };
 
-const PLANS = [
-  {
-    name: "Starter",
-    price: "Free",
-    detail: "1 free job / month",
-    features: ["1 active job", "Basic applicant list", "Standard placement"],
-    highlight: false,
-  },
-  {
-    name: "Small Business",
-    price: "₩29,000",
-    detail: "per month",
-    features: ["10 active jobs", "Applicant messaging", "City-level alerts"],
-    highlight: true,
-  },
-  {
-    name: "Pro",
-    price: "₩79,000",
-    detail: "per month",
-    features: ["40 active jobs", "Priority placement", "Verified badge"],
-    highlight: false,
-  },
-  {
-    name: "Enterprise",
-    price: "₩149,000",
-    detail: "per month",
-    features: ["Unlimited jobs", "Multiple locations", "Dedicated support"],
-    highlight: false,
-  },
-];
+export default async function PricingPage() {
+  const { t } = await getT();
+  const plans = [
+    {
+      name: t("pub.planStarter"),
+      price: t("pub.priceFree"),
+      detail: t("pub.starterDetail"),
+      features: [t("pub.fStarter1"), t("pub.fStarter2"), t("pub.fStarter3")],
+      highlight: false,
+    },
+    {
+      name: t("pub.planSmall"),
+      price: "₩29,000",
+      detail: t("pub.perMonthDetail"),
+      features: [t("pub.fSmall1"), t("pub.fSmall2"), t("pub.fSmall3")],
+      highlight: true,
+    },
+    {
+      name: t("pub.planPro"),
+      price: "₩79,000",
+      detail: t("pub.perMonthDetail"),
+      features: [t("pub.fPro1"), t("pub.fPro2"), t("pub.fPro3")],
+      highlight: false,
+    },
+    {
+      name: t("pub.planEnterprise"),
+      price: "₩149,000",
+      detail: t("pub.perMonthDetail"),
+      features: [t("pub.fEnt1"), t("pub.fEnt2"), t("pub.fEnt3")],
+      highlight: false,
+    },
+  ];
 
-export default function PricingPage() {
   return (
     <div className="container max-w-6xl py-12">
       <div className="text-center">
-        <Badge variant="success">Pilot — all plans free during launch</Badge>
-        <h1 className="mt-4 text-3xl font-bold">Pricing</h1>
-        <p className="mt-2 text-muted-foreground">
-          Pay only for posting jobs. We never take a cut of worker wages.
-        </p>
+        <Badge variant="success">{t("pub.pricingBadge")}</Badge>
+        <h1 className="mt-4 text-3xl font-bold">{t("pub.pricingTitle")}</h1>
+        <p className="mt-2 text-muted-foreground">{t("pub.pricingIntro")}</p>
       </div>
 
       <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {PLANS.map((plan) => (
+        {plans.map((plan) => (
           <Card
             key={plan.name}
             className={plan.highlight ? "border-2 border-primary" : ""}
           >
             <CardHeader>
-              {plan.highlight && (
-                <Badge className="w-fit">Most popular</Badge>
-              )}
+              {plan.highlight && <Badge className="w-fit">{t("pub.mostPopular")}</Badge>}
               <CardTitle>{plan.name}</CardTitle>
               <p className="text-3xl font-extrabold">
                 {plan.price}{" "}
@@ -76,7 +74,7 @@ export default function PricingPage() {
                 ))}
               </ul>
               <Button asChild className="w-full" variant={plan.highlight ? "default" : "outline"}>
-                <Link href="/register/choose-role">Get started</Link>
+                <Link href="/register/choose-role">{t("pub.getStarted")}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -84,11 +82,8 @@ export default function PricingPage() {
       </div>
 
       <div className="mt-12 rounded-lg border bg-gray-50 p-6 text-center">
-        <h2 className="text-lg font-semibold">Urgent boost</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Push any job to the top with a red urgent badge and priority alerts —
-          from ₩3,000 to ₩10,000 per boost depending on reach.
-        </p>
+        <h2 className="text-lg font-semibold">{t("pub.boostTitle")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("pub.boostDesc")}</p>
       </div>
     </div>
   );

@@ -5,6 +5,36 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 Versioning: `MAJOR.MINOR.PATCH` with a pre-release suffix during pilot
 (e.g. `0.1.0-pilot`). Release tags use the `v` prefix: `v0.1.0-pilot`.
 
+## [0.2.2-pilot] — 2026-06-24
+
+Full multilingual UI pass. No new features — the entire visible app now renders
+in Korean, English, and Uzbek.
+
+### Fixed
+- **Admin, public, and legal pages were English-only.** Founder/ops/users/
+  user-timeline admin screens, all public pages (how-it-works, pricing), and
+  all legal pages (terms, privacy, worker/employer agreements) are now fully
+  localized in all three languages.
+- **Uzbek "admin fallback" removed.** `i18n:check` now requires Uzbek to mirror
+  every Korean key (admin + legal included), not just user-facing ones.
+- Localized remaining accessibility labels (menu, notifications, language,
+  dialog close) and server-built admin timeline event labels.
+- `LegalNotice` now shows in every language (Korean: reference-pending-review;
+  English/Uzbek: translation-for-convenience).
+
+### Added
+- **`npm run i18n:scan`** — heuristic detector of hardcoded user-visible
+  strings (JSX text + visible attributes), with `// i18n-ignore` opt-out and a
+  `--ci` mode wired into CI.
+- New locale namespaces: `pub` (public pages) and an expanded `legal`
+  (terms/privacy/agreements); ~430 new translated keys across ko/en/uz
+  (catalogs now 792 keys each, fully mirrored).
+- I18N_QA.md expanded with public/worker/employer/admin checklists.
+
+### Notes
+- Legal page bodies remain `[Draft]` pending counsel review (translated but
+  marked). Brand wordmark stays "WorkNow Korea" in all languages by design.
+
 ## [0.2.1-pilot] — 2026-06-22
 
 Multilingual correctness pass. No new features — Korean, English, and Uzbek

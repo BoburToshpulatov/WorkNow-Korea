@@ -3,9 +3,8 @@
  *
  * Korean (ko) is the source of truth.
  *  - English (en) MUST mirror every ko key (fail otherwise).
- *  - Uzbek (uz) MUST mirror every USER-FACING ko key. Keys under the
- *    admin-only namespaces below are allowed to fall back (uz → en), so they
- *    are not required in uz.
+ *  - Uzbek (uz) MUST mirror every ko key (fail otherwise). Admin and legal
+ *    pages are now translated too — there is no fallback-as-hiding-place.
  *
  * Also reports extra keys (present in en/uz but not ko) as warnings.
  *
@@ -15,8 +14,8 @@ import ko from "../../src/locales/ko";
 import en from "../../src/locales/en";
 import uz from "../../src/locales/uz";
 
-// Top-level namespaces that may remain untranslated in Uzbek (fallback to EN).
-const UZ_ADMIN_ONLY = new Set(["admin"]);
+// Namespaces that may remain untranslated in Uzbek. Empty: uz must be complete.
+const UZ_ADMIN_ONLY = new Set<string>([]);
 
 type Dict = Record<string, unknown>;
 

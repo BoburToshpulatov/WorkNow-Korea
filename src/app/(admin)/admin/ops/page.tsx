@@ -96,7 +96,7 @@ export default async function AdminOpsPage({
 
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle className="text-lg">CSV</CardTitle>
+          <CardTitle className="text-lg">{t("admin.csv")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {exports.map((e) => (
@@ -133,7 +133,7 @@ export default async function AdminOpsPage({
               ))}
             </div>
             {smsLogs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No SMS logs.</p>
+              <p className="text-sm text-muted-foreground">{t("admin.noSmsLogs")}</p>
             ) : (
               <ul className="space-y-1 text-xs">
                 {smsLogs.map((l) => (

@@ -1,24 +1,23 @@
 import { LegalNotice } from "@/components/common/LegalNotice";
 import { Disclaimer } from "@/components/common/Disclaimer";
+import { getT } from "@/lib/getT";
 
 export const metadata = { title: "Worker Agreement — WorkNow Korea" };
 
-export default function WorkerAgreementPage() {
+export default async function WorkerAgreementPage() {
+  const { t } = await getT();
   return (
     <div className="container max-w-3xl py-12">
       <LegalNotice />
-      <h1 className="text-3xl font-bold">Worker Agreement</h1>
+      <h1 className="text-3xl font-bold">{t("legal.workerAgrTitle")}</h1>
       <div className="mt-6 space-y-4 text-sm leading-relaxed text-muted-foreground">
-        <p>
-          [Placeholder] By registering as a worker you acknowledge that WorkNow
-          Korea is an information platform only and does not employ you.
-        </p>
+        <p>{t("legal.workerAgrIntro")}</p>
         <ul className="list-disc space-y-2 pl-6">
-          <li>You contact and negotiate with employers directly.</li>
-          <li>WorkNow Korea does not guarantee any job, salary, or hours.</li>
-          <li>You are responsible for verifying job details and your eligibility to work.</li>
-          <li>You will not pay any fee to obtain a job through the platform.</li>
-          <li>You agree to use the platform honestly and report misconduct.</li>
+          <li>{t("legal.workerAgr1")}</li>
+          <li>{t("legal.workerAgr2")}</li>
+          <li>{t("legal.workerAgr3")}</li>
+          <li>{t("legal.workerAgr4")}</li>
+          <li>{t("legal.workerAgr5")}</li>
         </ul>
       </div>
       <Disclaimer className="mt-10" />

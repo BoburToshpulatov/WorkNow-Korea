@@ -97,7 +97,7 @@ export function Header() {
 
         <button
           className="md:hidden"
-          aria-label="Toggle menu"
+          aria-label={t("common.menu")}
           onClick={() => setOpen((o) => !o)}
         >
           {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

@@ -1,6 +1,6 @@
 {
   "name": "worknow-korea",
-  "version": "0.2.1-pilot",
+  "version": "0.2.2-pilot",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -18,7 +18,8 @@
     "storage:check": "tsx prisma/scripts/storage-check.ts",
     "rate-limit:check": "tsx prisma/scripts/rate-limit-check.ts",
     "secrets:check": "tsx prisma/scripts/secrets-check.ts",
-    "i18n:check": "tsx prisma/scripts/i18n-check.ts"
+    "i18n:check": "tsx prisma/scripts/i18n-check.ts",
+    "i18n:scan": "tsx prisma/scripts/i18n-scan.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

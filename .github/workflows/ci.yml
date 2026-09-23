@@ -44,6 +44,9 @@ jobs:
       - name: i18n check
         run: npm run i18n:check
 
+      - name: i18n scan (hardcoded strings)
+        run: npm run i18n:scan -- --ci
+
       - name: Typecheck
         run: npm run typecheck
 
